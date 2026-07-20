@@ -1,0 +1,18 @@
+# Environment
+.env
+.env.*
+**/.env
+**/.env.*
+
+# Node
+node_modules/
+
+# Build
+dist/
+apps/*/dist/
+
+# TypeScript
+*.tsbuildinfo
+
+# Local
+*.local
