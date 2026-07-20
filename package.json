@@ -1,0 +1,23 @@
+{
+  "name": "visit-control",
+  "version": "1.0.0",
+  "description": "Sistema de Controle de Visitantes",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
+    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "typecheck:libs": "tsc --build",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./apps/**\" --if-present run typecheck",
+    "dev:backend": "pnpm --filter @visit-control/backend run dev",
+    "dev:frontend": "pnpm --filter @visit-control/frontend run dev",
+    "db:push": "pnpm --filter @visit-control/db run push",
+    "db:generate": "pnpm --filter @visit-control/db run generate",
+    "db:migrate": "pnpm --filter @visit-control/db run migrate"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "prettier": "^3.9.4",
+    "typescript": "~5.9.3"
+  }
+}

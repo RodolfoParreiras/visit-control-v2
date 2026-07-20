@@ -1,0 +1,37 @@
+# ── Controle de versão ────────────────────────────────────────────────────────
+.git/
+.gitignore
+
+# ── Dependências instaladas (recriadas dentro do build) ───────────────────────
+**/node_modules/
+
+# ── Artefatos de build ────────────────────────────────────────────────────────
+**/dist/
+**/*.tsbuildinfo
+
+# ── Variáveis de ambiente (segredos não entram na imagem) ─────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Ferramentas apenas de desenvolvimento ─────────────────────────────────────
+packages/api-spec/
+
+# ── Scripts de operação (não são necessários dentro da imagem) ────────────────
+scripts/
+
+# ── Documentação e arquivos de projeto ───────────────────────────────────────
+README.md
+*.zip
+*.rar
+*.tar.gz
+
+# ── Dockerfiles (não precisam estar dentro da imagem gerada) ──────────────────
+**/Dockerfile
+**/.dockerignore
+docker/
+
+# ── Caches e logs ─────────────────────────────────────────────────────────────
+**/.cache/
+**/logs/
+*.log

@@ -1,0 +1,1396 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification for Sistema de Controle de Visitantes
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: sectors
+    description: Sector management
+  - name: visitors
+    description: Visitor management
+  - name: visits
+    description: Visit management
+  - name: dashboard
+    description: Dashboard statistics
+  - name: reports
+    description: Reports and exports
+  - name: audit
+    description: Audit logs
+  - name: config
+    description: System configuration
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # ── Users ─────────────────────────────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [admin, receptionist]
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive]
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Sectors ───────────────────────────────────────────────────────────────
+  /sectors:
+    get:
+      operationId: listSectors
+      tags: [sectors]
+      summary: List sectors
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [active, inactive]
+      responses:
+        "200":
+          description: List of sectors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Sector"
+    post:
+      operationId: createSector
+      tags: [sectors]
+      summary: Create sector
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+
+  /sectors/{id}:
+    get:
+      operationId: getSector
+      tags: [sectors]
+      summary: Get sector by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Sector
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+    patch:
+      operationId: updateSector
+      tags: [sectors]
+      summary: Update sector
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+    delete:
+      operationId: deleteSector
+      tags: [sectors]
+      summary: Delete sector
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Visitors ──────────────────────────────────────────────────────────────
+  /visitors:
+    get:
+      operationId: listVisitors
+      tags: [visitors]
+      summary: List visitors with optional search
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: cpf
+          schema:
+            type: string
+        - in: query
+          name: phone
+          schema:
+            type: string
+        - in: query
+          name: company
+          schema:
+            type: string
+        - in: query
+          name: city
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of visitors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitorListResponse"
+    post:
+      operationId: createVisitor
+      tags: [visitors]
+      summary: Create visitor
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visitor"
+
+  /visitors/search:
+    get:
+      operationId: searchVisitors
+      tags: [visitors]
+      summary: Real-time search for autocomplete during visit registration
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matched visitors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Visitor"
+
+  /visitors/{id}:
+    get:
+      operationId: getVisitor
+      tags: [visitors]
+      summary: Get visitor with full visit history
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Visitor with history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitorWithHistory"
+    patch:
+      operationId: updateVisitor
+      tags: [visitors]
+      summary: Update visitor
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitorUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visitor"
+
+  # ── Visits ────────────────────────────────────────────────────────────────
+  /visits:
+    get:
+      operationId: listVisits
+      tags: [visits]
+      summary: List visits with filters
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: sectorId
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ongoing, finished, cancelled]
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: userId
+          schema:
+            type: integer
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: List of visits
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VisitListResponse"
+    post:
+      operationId: createVisit
+      tags: [visits]
+      summary: Register a visit entry (creates visitor if not exists)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visit"
+
+  /visits/{id}:
+    get:
+      operationId: getVisit
+      tags: [visits]
+      summary: Get visit by ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Visit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visit"
+    patch:
+      operationId: updateVisit
+      tags: [visits]
+      summary: Update visit (admin only - corrections)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VisitUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visit"
+
+  /visits/{id}/checkout:
+    post:
+      operationId: checkoutVisit
+      tags: [visits]
+      summary: Register visit exit
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Checked out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visit"
+
+  /visits/{id}/cancel:
+    post:
+      operationId: cancelVisit
+      tags: [visits]
+      summary: Cancel a visit (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CancelVisitInput"
+      responses:
+        "200":
+          description: Cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Visit"
+
+  /visits/{id}/reprint:
+    post:
+      operationId: reprintLabel
+      tags: [visits]
+      summary: Log label reprint (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Reprinted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  # ── Dashboard ─────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/visits-by-sector:
+    get:
+      operationId: getVisitsBySector
+      tags: [dashboard]
+      summary: Visits grouped by sector
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Visits by sector
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SectorCount"
+
+  /dashboard/weekly-chart:
+    get:
+      operationId: getWeeklyChart
+      tags: [dashboard]
+      summary: Weekly visit chart data (last 7 days)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Weekly chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChartPoint"
+
+  /dashboard/monthly-chart:
+    get:
+      operationId: getMonthlyChart
+      tags: [dashboard]
+      summary: Monthly visit chart data (last 30 days)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Monthly chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChartPoint"
+
+  /dashboard/recent-visits:
+    get:
+      operationId: getRecentVisits
+      tags: [dashboard]
+      summary: Most recent visits
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: Recent visits
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Visit"
+
+  # ── Reports ───────────────────────────────────────────────────────────────
+  /reports/visits:
+    get:
+      operationId: getVisitsReport
+      tags: [reports]
+      summary: Get visits report data
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: sectorId
+          schema:
+            type: integer
+        - in: query
+          name: userId
+          schema:
+            type: integer
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [ongoing, finished, cancelled]
+      responses:
+        "200":
+          description: Report data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportData"
+
+  # ── Audit ─────────────────────────────────────────────────────────────────
+  /audit:
+    get:
+      operationId: listAuditLogs
+      tags: [audit]
+      summary: List audit logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: userId
+          schema:
+            type: integer
+        - in: query
+          name: action
+          schema:
+            type: string
+        - in: query
+          name: dateFrom
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: dateTo
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditListResponse"
+
+  # ── Config ────────────────────────────────────────────────────────────────
+  /config/fields:
+    get:
+      operationId: getFieldConfig
+      tags: [config]
+      summary: Get field configuration
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Field configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldConfig"
+    put:
+      operationId: updateFieldConfig
+      tags: [config]
+      summary: Update field configuration (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FieldConfig"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FieldConfig"
+
+  /config/label:
+    get:
+      operationId: getLabelConfig
+      tags: [config]
+      summary: Get label/badge configuration
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Label configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelConfig"
+    put:
+      operationId: updateLabelConfig
+      tags: [config]
+      summary: Update label configuration (admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LabelConfig"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabelConfig"
+
+# ── Components ───────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdParam:
+      in: path
+      name: id
+      required: true
+      schema:
+        type: integer
+
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    # ── Auth ──────────────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      required: [login, password]
+      properties:
+        login:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+
+    # ── User ──────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, name, login, role, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        login:
+          type: string
+        role:
+          type: string
+          enum: [admin, receptionist]
+        status:
+          type: string
+          enum: [active, inactive]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    UserInput:
+      type: object
+      required: [name, login, password, role]
+      properties:
+        name:
+          type: string
+        login:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [admin, receptionist]
+        status:
+          type: string
+          enum: [active, inactive]
+          default: active
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        login:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [admin, receptionist]
+        status:
+          type: string
+          enum: [active, inactive]
+
+    # ── Sector ────────────────────────────────────────────────────────────
+    Sector:
+      type: object
+      required: [id, name, abbreviation, secretariat, status, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        abbreviation:
+          type: string
+        secretariat:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        createdAt:
+          type: string
+          format: date-time
+
+    SectorInput:
+      type: object
+      required: [name, abbreviation, secretariat]
+      properties:
+        name:
+          type: string
+        abbreviation:
+          type: string
+        secretariat:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+          default: active
+
+    SectorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        abbreviation:
+          type: string
+        secretariat:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+
+    # ── Visitor ───────────────────────────────────────────────────────────
+    Visitor:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cpf:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    VisitorInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        cpf:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        city:
+          type: string
+
+    VisitorUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        cpf:
+          type: string
+        phone:
+          type: string
+        company:
+          type: string
+        city:
+          type: string
+
+    VisitorWithHistory:
+      type: object
+      required: [id, name, createdAt, visits]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        cpf:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        company:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: ["string", "null"]
+          format: date-time
+        visits:
+          type: array
+          items:
+            $ref: "#/components/schemas/Visit"
+
+    VisitorListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Visitor"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ── Visit ─────────────────────────────────────────────────────────────
+    Visit:
+      type: object
+      required: [id, visitorId, sectorId, status, entryDate, entryTime, entryUserId, createdAt]
+      properties:
+        id:
+          type: integer
+        visitorId:
+          type: integer
+        visitor:
+          $ref: "#/components/schemas/Visitor"
+        sectorId:
+          type: integer
+        sector:
+          $ref: "#/components/schemas/Sector"
+        responsible:
+          type: ["string", "null"]
+        reason:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [ongoing, finished, cancelled]
+        entryDate:
+          type: string
+          format: date
+        entryTime:
+          type: string
+        entryUserId:
+          type: integer
+        entryUser:
+          $ref: "#/components/schemas/User"
+        exitDate:
+          type: ["string", "null"]
+          format: date
+        exitTime:
+          type: ["string", "null"]
+        exitUserId:
+          type: ["integer", "null"]
+        exitUser:
+          $ref: "#/components/schemas/User"
+        cancelReason:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    VisitInput:
+      type: object
+      required: [sectorId]
+      properties:
+        visitorId:
+          type: ["integer", "null"]
+        visitorName:
+          type: string
+        visitorCpf:
+          type: string
+        visitorPhone:
+          type: string
+        visitorCompany:
+          type: string
+        visitorCity:
+          type: string
+        updateVisitorData:
+          type: boolean
+          default: false
+        sectorId:
+          type: integer
+        responsible:
+          type: string
+        reason:
+          type: string
+        notes:
+          type: string
+
+    VisitUpdate:
+      type: object
+      properties:
+        sectorId:
+          type: integer
+        responsible:
+          type: string
+        reason:
+          type: string
+        notes:
+          type: string
+        exitDate:
+          type: string
+          format: date
+        exitTime:
+          type: string
+
+    CancelVisitInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+
+    VisitListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Visit"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ── Dashboard ─────────────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [todayTotal, currentlyPresent, todayExits, weekTotal, monthTotal]
+      properties:
+        todayTotal:
+          type: integer
+        currentlyPresent:
+          type: integer
+        todayExits:
+          type: integer
+        weekTotal:
+          type: integer
+        monthTotal:
+          type: integer
+
+    SectorCount:
+      type: object
+      required: [sectorId, sectorName, count]
+      properties:
+        sectorId:
+          type: integer
+        sectorName:
+          type: string
+        count:
+          type: integer
+
+    ChartPoint:
+      type: object
+      required: [label, total]
+      properties:
+        label:
+          type: string
+        total:
+          type: integer
+
+    # ── Reports ───────────────────────────────────────────────────────────
+    ReportData:
+      type: object
+      required: [visits, total, filters]
+      properties:
+        visits:
+          type: array
+          items:
+            $ref: "#/components/schemas/Visit"
+        total:
+          type: integer
+        filters:
+          type: object
+          properties:
+            dateFrom:
+              type: ["string", "null"]
+            dateTo:
+              type: ["string", "null"]
+
+    # ── Audit ─────────────────────────────────────────────────────────────
+    AuditLog:
+      type: object
+      required: [id, action, userId, createdAt]
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        userId:
+          type: integer
+        user:
+          $ref: "#/components/schemas/User"
+        ipAddress:
+          type: ["string", "null"]
+        entityType:
+          type: ["string", "null"]
+        entityId:
+          type: ["integer", "null"]
+        previousData:
+          type: ["string", "null"]
+          description: JSON-serialized previous data
+        newData:
+          type: ["string", "null"]
+          description: JSON-serialized new data
+        createdAt:
+          type: string
+          format: date-time
+
+    AuditListResponse:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ── Config ────────────────────────────────────────────────────────────
+    FieldConfig:
+      type: object
+      required: [cpf, phone, company, city, responsible, reason, notes]
+      properties:
+        cpf:
+          type: string
+          enum: [hidden, optional, required]
+        phone:
+          type: string
+          enum: [hidden, optional, required]
+        company:
+          type: string
+          enum: [hidden, optional, required]
+        city:
+          type: string
+          enum: [hidden, optional, required]
+        responsible:
+          type: string
+          enum: [hidden, optional, required]
+        reason:
+          type: string
+          enum: [hidden, optional, required]
+        notes:
+          type: string
+          enum: [hidden, optional, required]
+
+    LabelConfig:
+      type: object
+      properties:
+        municipalityName:
+          type: string
+        title:
+          type: string
+        logoUrl:
+          type: ["string", "null"]
+        showLogo:
+          type: boolean
+        showQrCode:
+          type: boolean
+        showName:
+          type: boolean
+        showSector:
+          type: boolean
+        showDate:
+          type: boolean
+        showTime:
+          type: boolean
+        showVisitNumber:
+          type: boolean
+        labelWidth:
+          type: number
+        labelHeight:
+          type: number
+        marginTop:
+          type: number
+        marginRight:
+          type: number
+        marginBottom:
+          type: number
+        marginLeft:
+          type: number
+        fontSize:
+          type: number
+        fontFamily:
+          type: string
+        printerModel:
+          type: string
+        elementsLayout:
+          type: ["string", "null"]
+        headerText:
+          type: ["string", "null"]
+        footerText:
+          type: ["string", "null"]
