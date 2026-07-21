@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import QRCode from 'react-qr-code';
-import { format } from 'date-fns';
+import { formatDateOnly } from '@/lib/utils';
 import type { Visit, LabelConfig } from '@visit-control/api-client';
 
 interface PrintLabelProps {
@@ -48,6 +48,7 @@ export function parseLayout(raw: string | null | undefined): LabelLayout {
 }
 
 export function PrintLabel({ visit, config }: PrintLabelProps) {
+  console.log("PRINT LABEL", visit);
   const layout = useMemo(() => parseLayout(config.elementsLayout), [config.elementsLayout]);
 
   const containerStyle: React.CSSProperties = {
@@ -67,9 +68,7 @@ export function PrintLabel({ visit, config }: PrintLabelProps) {
     maxWidth: '95%',
   });
 
-  const entryDateStr = visit.entryDate
-    ? (() => { try { return format(new Date(visit.entryDate), 'dd/MM/yyyy'); } catch { return visit.entryDate; } })()
-    : '-';
+  const entryDateStr = formatDateOnly(visit.entryDate) || '-';
 
   return (
     <div

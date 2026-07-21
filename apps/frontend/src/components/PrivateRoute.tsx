@@ -5,9 +5,10 @@ import { ReactNode } from 'react';
 interface PrivateRouteProps {
   children: ReactNode;
   adminOnly?: boolean;
+  allowPasswordChange?: boolean;
 }
 
-export function PrivateRoute({ children, adminOnly = false }: PrivateRouteProps) {
+export function PrivateRoute({ children, adminOnly = false, allowPasswordChange = false }: PrivateRouteProps) {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
 
@@ -24,6 +25,14 @@ export function PrivateRoute({ children, adminOnly = false }: PrivateRouteProps)
 
   if (!user) {
     return <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />;
+  }
+
+  if (user.mustChangePassword && !allowPasswordChange) {
+    return <Redirect to="/change-password" />;
+  }
+
+  if (!user.mustChangePassword && allowPasswordChange) {
+    return <Redirect to="/dashboard" />;
   }
 
   if (adminOnly && user.role !== 'admin') {

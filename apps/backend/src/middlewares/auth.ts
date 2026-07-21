@@ -38,6 +38,13 @@ export async function requireAuth(
   }
 
   (req as Request & { user: typeof user }).user = user;
+
+  const allowedWhileChangingPassword = ["/auth/me", "/auth/logout", "/auth/change-password"];
+  if (user.mustChangePassword && !allowedWhileChangingPassword.includes(req.path)) {
+    res.status(403).json({ error: "Você precisa alterar sua senha antes de continuar" });
+    return;
+  }
+
   next();
 }
 

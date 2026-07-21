@@ -8,6 +8,8 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
+// DESABILITA ETag para APIs autenticadas
+app.set('etag', false);
 
 // ── Trust proxy (necessário atrás do Nginx) ────────────────────────────────
 app.set("trust proxy", 1);

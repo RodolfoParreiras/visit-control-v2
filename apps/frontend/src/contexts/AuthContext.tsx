@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (token: string, user: User) => void;
+  updateUser: (user: User) => void;
   logout: () => void;
 }
 
@@ -38,6 +39,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
   };
 
+  const updateUser = (updatedUser: User) => {
+    setUser(updatedUser);
+  };
+
   const logout = () => {
     localStorage.removeItem('auth_token');
     setToken(null);
@@ -45,10 +50,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.location.href = '/login';
   };
 
-  const isLoading = !!token && isQueryLoading && !user;
+  // A consulta pode terminar antes de o efeito acima sincronizar `user` com o
+  // estado local. Usar a resposta diretamente evita que a rota privada veja
+  // um instante em que não há carregamento nem usuário e redirecione ao login.
+  const authenticatedUser = user ?? currentUser;
+  const isLoading = !!token && isQueryLoading && !authenticatedUser;
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user: authenticatedUser, isLoading, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

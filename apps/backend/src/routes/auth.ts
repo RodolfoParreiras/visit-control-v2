@@ -71,6 +71,57 @@ router.post("/auth/logout", requireAuth, async (req: Request, res: Response): Pr
   res.json({ success: true, message: "Desconectado com sucesso" });
 });
 
+router.post("/auth/change-password", requireAuth, async (req: Request, res: Response): Promise<void> => {
+  const { currentPassword, newPassword } = req.body ?? {};
+  const user = (req as Request & { user: typeof usersTable.$inferSelect }).user;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ error: "Senha atual e nova senha são obrigatórias" });
+    return;
+  }
+
+  if (typeof newPassword !== "string" || newPassword.length < 8) {
+    res.status(400).json({ error: "A nova senha deve ter pelo menos 8 caracteres" });
+    return;
+  }
+
+  if (currentPassword === newPassword) {
+    res.status(400).json({ error: "A nova senha deve ser diferente da senha atual" });
+    return;
+  }
+
+  const valid = await bcrypt.compare(String(currentPassword), user.passwordHash);
+  if (!valid) {
+    res.status(400).json({ error: "A senha atual está incorreta" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(usersTable)
+    .set({
+      passwordHash: await bcrypt.hash(newPassword, 10),
+      mustChangePassword: false,
+      updatedAt: new Date(),
+    })
+    .where(eq(usersTable.id, user.id))
+    .returning();
+
+  await auditAction({
+    userId: user.id,
+    action: "change_password",
+    ipAddress: req.ip,
+    entityType: "user",
+    entityId: user.id,
+  });
+
+  const { passwordHash: _ph, ...safeUser } = updated;
+  res.json({
+    ...safeUser,
+    updatedAt: updated.updatedAt?.toISOString() ?? null,
+    createdAt: updated.createdAt.toISOString(),
+  });
+});
+
 router.get("/auth/me", requireAuth, async (req: Request, res: Response): Promise<void> => {
   const user = (req as Request & { user: typeof usersTable.$inferSelect }).user;
   const { passwordHash: _ph, ...safeUser } = user;

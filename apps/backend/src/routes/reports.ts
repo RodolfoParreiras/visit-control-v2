@@ -6,14 +6,13 @@ import {
   sectorsTable,
 } from "@visit-control/db";
 import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { requireAuth } from "../middlewares/auth";
 
 const router: IRouter = Router();
 
 router.get(
   "/reports/visits",
   requireAuth,
-  requireAdmin,
   async (req: Request, res: Response): Promise<void> => {
     const { dateFrom, dateTo, sectorId, userId, status } =
       req.query as Record<string, string | undefined>;

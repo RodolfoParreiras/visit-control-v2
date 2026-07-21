@@ -14,6 +14,7 @@ export interface User {
   login: string;
   role: UserRole;
   status: UserStatus;
+  mustChangePassword: boolean;
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;

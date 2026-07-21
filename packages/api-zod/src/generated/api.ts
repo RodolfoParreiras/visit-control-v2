@@ -32,6 +32,7 @@ export const LoginResponse = zod.object({
   "login": zod.string(),
   "role": zod.enum(['admin', 'receptionist']),
   "status": zod.enum(['active', 'inactive']),
+  "mustChangePassword": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -56,6 +57,7 @@ export const GetCurrentUserResponse = zod.object({
   "login": zod.string(),
   "role": zod.enum(['admin', 'receptionist']),
   "status": zod.enum(['active', 'inactive']),
+  "mustChangePassword": zod.boolean(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })

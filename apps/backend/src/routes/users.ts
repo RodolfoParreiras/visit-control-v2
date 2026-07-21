@@ -61,6 +61,7 @@ router.post("/users", requireAuth, requireAdmin, async (req: Request, res: Respo
       passwordHash,
       role: role as "admin" | "receptionist",
       status: (status as "active" | "inactive") ?? "active",
+      mustChangePassword: role === "receptionist",
     })
     .returning();
 
@@ -100,7 +101,12 @@ router.patch("/users/:id", requireAuth, requireAdmin, async (req: Request, res: 
   const updates: Partial<typeof usersTable.$inferInsert> = { updatedAt: new Date() };
   if (name) updates.name = String(name);
   if (login) updates.login = String(login);
-  if (password) updates.passwordHash = await bcrypt.hash(String(password), 10);
+  if (password) {
+    updates.passwordHash = await bcrypt.hash(String(password), 10);
+    if ((role ?? existing.role) === "receptionist") {
+      updates.mustChangePassword = true;
+    }
+  }
   if (role && ["admin", "receptionist"].includes(role)) updates.role = role;
   if (status && ["active", "inactive"].includes(status)) updates.status = status;
 

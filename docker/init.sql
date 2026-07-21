@@ -14,9 +14,13 @@ CREATE TABLE IF NOT EXISTS users (
                   CHECK (role IN ('admin', 'receptionist')),
   status        TEXT NOT NULL DEFAULT 'active'
                   CHECK (status IN ('active', 'inactive')),
+  must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ
 );
+
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS sectors (
   id           SERIAL PRIMARY KEY,

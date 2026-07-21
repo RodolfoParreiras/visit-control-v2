@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
+import { formatDateOnly } from '@/lib/utils';
 
 export default function VisitorDetail() {
   const { id } = useParams<{ id: string }>();
@@ -180,7 +181,7 @@ export default function VisitorDetail() {
                           <Link href={`/visits/${visit.id}`} className="hover:underline text-primary">#{visit.id}</Link>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {format(new Date(visit.entryDate), 'dd/MM/yyyy')}
+                          {formatDateOnly(visit.entryDate)}
                         </TableCell>
                         <TableCell className="font-medium text-sm">
                           {visit.sector?.name || `Setor #${visit.sectorId}`}

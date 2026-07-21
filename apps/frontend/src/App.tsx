@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { PrivateRoute } from "@/components/PrivateRoute";
 
 import Login from "@/pages/login";
+import ChangePassword from "@/pages/change-password";
 import Home from "@/pages/home";
 import Dashboard from "@/pages/dashboard";
 import Visits from "@/pages/visits/index";
@@ -35,6 +36,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/change-password">
+        <PrivateRoute allowPasswordChange>
+          <ChangePassword />
+        </PrivateRoute>
+      </Route>
       <Route path="/">
         <PrivateRoute>
           <Home />
@@ -108,7 +114,7 @@ function Router() {
       </Route>
 
       <Route path="/reports">
-        <PrivateRoute adminOnly>
+        <PrivateRoute>
           <Reports />
         </PrivateRoute>
       </Route>

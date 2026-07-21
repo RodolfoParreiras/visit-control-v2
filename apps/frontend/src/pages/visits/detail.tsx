@@ -28,7 +28,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
-import { format } from 'date-fns';
+import { formatDateOnly } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,7 +146,7 @@ export default function VisitDetail() {
               <StatusBadge status={visit.status} />
             </div>
             <p className="text-gray-500 mt-1 flex items-center gap-2">
-              <CalendarDays className="w-4 h-4" /> {format(new Date(visit.entryDate), 'dd/MM/yyyy')} às {visit.entryTime}
+              <CalendarDays className="w-4 h-4" /> {formatDateOnly(visit.entryDate)} às {visit.entryTime}
             </p>
           </div>
           

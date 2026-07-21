@@ -13,11 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { StatusBadge } from '@/components/StatusBadge';
+import { useAuth } from '@/contexts/AuthContext';
+import { formatDateOnly } from '@/lib/utils';
 import { utils, writeFile } from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function Reports() {
+  const { user } = useAuth();
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sectorId, setSectorId] = useState<string>('all');
@@ -25,7 +28,12 @@ export default function Reports() {
   const [status, setStatus] = useState<string>('all');
 
   const { data: sectors } = useListSectors();
-  const { data: users } = useListUsers();
+  const { data: users } = useListUsers(undefined, {
+    // A listagem de usuários é exclusiva de administradores.
+    // Recepcionistas ainda podem emitir relatórios usando os demais filtros.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    query: { enabled: user?.role === 'admin' } as any,
+  });
 
   const { data: report, isLoading } = useGetVisitsReport({
     dateFrom: dateFrom || undefined,
@@ -45,7 +53,7 @@ export default function Reports() {
     
     const exportData = visits.map(v => ({
       ID: v.id,
-      Data: format(new Date(v.entryDate), 'dd/MM/yyyy'),
+      Data: formatDateOnly(v.entryDate),
       Entrada: v.entryTime,
       Saida: v.exitTime || '',
       Visitante: v.visitor?.name,
@@ -78,7 +86,7 @@ export default function Reports() {
 
     const tableData = visits.map(v => [
       v.id,
-      format(new Date(v.entryDate), 'dd/MM/yyyy'),
+      formatDateOnly(v.entryDate),
       v.entryTime,
       v.exitTime || '-',
       v.visitor?.name || '',
@@ -131,16 +139,18 @@ export default function Reports() {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Recepcionista (Entrada)</label>
-                <Select value={userId} onValueChange={setUserId}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Usuários</SelectItem>
-                    {users?.map(u => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
+              {user?.role === 'admin' && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 mb-1 block">Recepcionista (Entrada)</label>
+                  <Select value={userId} onValueChange={setUserId}>
+                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os Usuários</SelectItem>
+                      {users?.map(u => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-semibold text-gray-500 mb-1 block">Status</label>
                 <Select value={status} onValueChange={setStatus}>
@@ -195,7 +205,7 @@ export default function Reports() {
                   visits.map((visit) => (
                     <TableRow key={visit.id} className="hover:bg-gray-50">
                       <TableCell className="font-mono text-xs text-gray-500">#{visit.id}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{format(new Date(visit.entryDate), 'dd/MM/yyyy')}</TableCell>
+                      <TableCell className="text-sm whitespace-nowrap">{formatDateOnly(visit.entryDate)}</TableCell>
                       <TableCell>
                         <div className="font-medium text-sm">{visit.visitor?.name}</div>
                         {visit.visitor?.cpf && <div className="text-xs text-gray-500 font-mono">{visit.visitor.cpf}</div>}

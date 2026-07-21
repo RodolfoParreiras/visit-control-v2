@@ -14,13 +14,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
-import { format } from 'date-fns';
 import { Link } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { formatDateOnly } from '@/lib/utils';
+
+function getTodayInSaoPaulo() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts();
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value;
+
+  return `${value('year')}-${value('month')}-${value('day')}`;
+}
 
 export default function VisitsList() {
   const { user } = useAuth();
@@ -32,8 +45,8 @@ export default function VisitsList() {
   const [search, setSearch] = useState('');
   const [sectorId, setSectorId] = useState<string>('all');
   const [status, setStatus] = useState<string>('all');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(getTodayInSaoPaulo);
+  const [dateTo, setDateTo] = useState(getTodayInSaoPaulo);
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<number | null>(null);
@@ -56,6 +69,29 @@ export default function VisitsList() {
   const visits = response?.data || [];
   const total = response?.total || 0;
   const totalPages = Math.ceil(total / 15);
+
+  const resetPage = () => setPage(1);
+
+  const handleDateFromChange = (value: string) => {
+    const nextDate = value || getTodayInSaoPaulo();
+    setDateFrom(nextDate);
+    if (nextDate > dateTo) setDateTo(nextDate);
+    resetPage();
+  };
+
+  const handleDateToChange = (value: string) => {
+    const nextDate = value || getTodayInSaoPaulo();
+    setDateTo(nextDate);
+    if (nextDate < dateFrom) setDateFrom(nextDate);
+    resetPage();
+  };
+
+  const setTodayFilter = () => {
+    const today = getTodayInSaoPaulo();
+    setDateFrom(today);
+    setDateTo(today);
+    resetPage();
+  };
 
   const handleCheckout = (id: number) => {
     if (confirm('Confirmar a saída deste visitante?')) {
@@ -101,11 +137,11 @@ export default function VisitsList() {
                 <Input 
                   placeholder="Buscar por visitante, CPF..." 
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => { setSearch(e.target.value); resetPage(); }}
                   className="pl-9 bg-white"
                 />
               </div>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status} onValueChange={(value) => { setStatus(value); resetPage(); }}>
                 <SelectTrigger className="w-[180px] bg-white">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
@@ -120,7 +156,7 @@ export default function VisitsList() {
             
             <div className="flex flex-wrap gap-4">
               <div className="w-[200px]">
-                <Select value={sectorId} onValueChange={setSectorId}>
+                <Select value={sectorId} onValueChange={(value) => { setSectorId(value); resetPage(); }}>
                   <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Setor" />
                   </SelectTrigger>
@@ -133,9 +169,10 @@ export default function VisitsList() {
                 </Select>
               </div>
               <div className="flex items-center gap-2">
-                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="w-[150px] bg-white text-sm" />
+                <Input type="date" value={dateFrom} max={dateTo} onChange={e => handleDateFromChange(e.target.value)} className="w-[150px] bg-white text-sm" />
                 <span className="text-gray-400">até</span>
-                <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="w-[150px] bg-white text-sm" />
+                <Input type="date" value={dateTo} min={dateFrom} onChange={e => handleDateToChange(e.target.value)} className="w-[150px] bg-white text-sm" />
+                <Button type="button" variant="outline" size="sm" onClick={setTodayFilter}>Hoje</Button>
               </div>
             </div>
           </div>
@@ -169,10 +206,10 @@ export default function VisitsList() {
                       <TableCell className="font-medium">{visit.visitor?.name}</TableCell>
                       <TableCell className="text-sm">{visit.sector?.name}</TableCell>
                       <TableCell className="text-sm whitespace-nowrap">
-                        {format(new Date(visit.entryDate), 'dd/MM/yyyy')} <span className="font-mono text-xs ml-1 text-gray-500">{visit.entryTime}</span>
+                        {formatDateOnly(visit.entryDate)} <span className="font-mono text-xs ml-1 text-gray-500">{visit.entryTime}</span>
                       </TableCell>
                       <TableCell className="font-mono text-xs text-gray-500 whitespace-nowrap">
-                        {visit.exitTime ? `${format(new Date(visit.exitDate!), 'dd/MM/yyyy')} ${visit.exitTime}` : '-'}
+                        {visit.exitTime ? `${formatDateOnly(visit.exitDate)} ${visit.exitTime}` : '-'}
                       </TableCell>
                       <TableCell><StatusBadge status={visit.status} /></TableCell>
                       <TableCell className="text-right whitespace-nowrap space-x-1">

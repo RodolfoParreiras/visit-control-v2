@@ -26,16 +26,36 @@ type AuthReq = Request & { user: typeof usersTable.$inferSelect };
 const router: IRouter = Router();
 
 function nowDate() {
-  const d = new Date();
-  return d.toISOString().split("T")[0];
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts();
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value;
+
+  return `${value("year")}-${value("month")}-${value("day")}`;
 }
 
 function nowTime() {
   return new Date().toLocaleTimeString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
+}
+
+function isValidDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
 
 async function getFullVisit(id: number) {
@@ -143,12 +163,22 @@ router.get(
       search,
       sectorId,
       status,
-      dateFrom,
-      dateTo,
+      dateFrom = nowDate(),
+      dateTo = nowDate(),
       userId,
       page = "1",
       limit = "20",
     } = req.query as Record<string, string | undefined>;
+
+    if (!isValidDate(dateFrom) || !isValidDate(dateTo)) {
+      res.status(400).json({ error: "As datas devem estar no formato AAAA-MM-DD" });
+      return;
+    }
+
+    if (dateFrom > dateTo) {
+      res.status(400).json({ error: "A data inicial não pode ser posterior à data final" });
+      return;
+    }
 
     const pageNum = Math.max(1, parseInt(page, 10));
     const limitNum = Math.min(100, parseInt(limit, 10));
@@ -159,8 +189,8 @@ router.get(
     if (status && ["ongoing", "finished", "cancelled"].includes(status)) {
       conditions.push(eq(visitsTable.status, status as "ongoing" | "finished" | "cancelled"));
     }
-    if (dateFrom) conditions.push(gte(visitsTable.entryDate, dateFrom));
-    if (dateTo) conditions.push(lte(visitsTable.entryDate, dateTo));
+    conditions.push(gte(visitsTable.entryDate, dateFrom));
+    conditions.push(lte(visitsTable.entryDate, dateTo));
     if (userId) conditions.push(eq(visitsTable.entryUserId, parseInt(userId, 10)));
 
     const whereClause = conditions.length ? and(...conditions) : undefined;

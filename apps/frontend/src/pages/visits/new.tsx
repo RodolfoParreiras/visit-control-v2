@@ -22,6 +22,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { PrintLabel } from '@/components/PrintLabel';
+import { printVisitLabel } from '@/lib/print-label';
 
 export default function VisitNew() {
   const { toast } = useToast();
@@ -94,11 +95,11 @@ export default function VisitNew() {
     defaultValues: { sectorId: '', responsible: '', reason: '', notes: '' },
   });
 
-useEffect(() => {
-  if (fieldConfig) {
-    form.clearErrors();
-  }
-}, [fieldConfig, form]);
+  useEffect(() => {
+    if (fieldConfig) {
+      form.clearErrors();
+    }
+  }, [fieldConfig, form]);
 
   const selectVisitor = (visitor: any) => {
     setSelectedVisitor(visitor);
@@ -111,6 +112,18 @@ useEffect(() => {
     setCreatedVisit(null);
     form.reset({ sectorId: '', responsible: '', reason: '', notes: '' });
     setLocation('/visits/new');
+  };
+
+  const labelRef = useRef<HTMLDivElement>(null);
+
+  const handlePrint = () => {
+    if (labelRef.current && labelConfig) {
+      printVisitLabel(
+        labelRef.current,
+        labelConfig.labelWidth ?? 100,
+        labelConfig.labelHeight ?? 60,
+      );
+    }
   };
 
   const onSubmit = (data: any) => {
@@ -172,7 +185,7 @@ useEffect(() => {
                     Nova Visita
                   </Button>
                   <Button
-                    onClick={() => window.print()}
+                    variant="outline" onClick={handlePrint} disabled={!labelConfig}
                     className="w-40 gap-2 bg-blue-600 hover:bg-blue-700"
                   >
                     <Printer className="w-4 h-4" />
@@ -186,6 +199,14 @@ useEffect(() => {
             <PrintLabel visit={createdVisit} config={labelConfig} />
           </div>
         </div>
+
+        {/* Elemento oculto usado como fonte para a janela de impressão */}
+        {labelConfig && (
+          <div ref={labelRef} style={{ position: 'fixed', left: '-9999px', top: 0}} aria-hidden>
+            <PrintLabel visit={createdVisit} config={labelConfig} />
+          </div>
+        )}
+
       </AppLayout>
     );
   }

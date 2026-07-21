@@ -13,6 +13,18 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 // Garante que o admin padrão existe antes de aceitar requisições
+await pool.query(
+  `
+    ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE visits
+      ADD COLUMN IF NOT EXISTS visitor_name TEXT,
+      ADD COLUMN IF NOT EXISTS visitor_cpf TEXT,
+      ADD COLUMN IF NOT EXISTS visitor_phone TEXT,
+      ADD COLUMN IF NOT EXISTS visitor_company TEXT,
+      ADD COLUMN IF NOT EXISTS visitor_city TEXT;
+  `,
+);
 await seedAdminUser();
 
 const server = app.listen(port, () => {

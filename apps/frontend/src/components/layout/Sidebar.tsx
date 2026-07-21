@@ -81,6 +81,16 @@ export function Sidebar() {
           <span>Visitantes</span>
         </Link>
 
+        <Link href="/reports" className={cn(
+          "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
+          isNavActive('/reports')
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "hover:bg-sidebar-accent/50 text-sidebar-foreground/80 hover:text-sidebar-foreground"
+        )}>
+          <FileBarChart className="w-4 h-4" />
+          <span>Relatórios</span>
+        </Link>
+
         {user?.role === 'admin' && (
           <>
             <div className="pt-4 pb-2 px-3">
@@ -133,16 +143,6 @@ export function Sidebar() {
             )}>
               <Tag className="w-4 h-4" />
               <span>Etiqueta de Visita</span>
-            </Link>
-
-            <Link href="/reports" className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors",
-              isNavActive('/reports')
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "hover:bg-sidebar-accent/50 text-sidebar-foreground/80 hover:text-sidebar-foreground"
-            )}>
-              <FileBarChart className="w-4 h-4" />
-              <span>Relatórios</span>
             </Link>
 
             <Link href="/audit" className={cn(

@@ -36,7 +36,7 @@ export default function Login() {
     loginMutation.mutate({ data }, {
       onSuccess: (result) => {
         login(result.token, result.user);
-        navigate('/dashboard');
+        navigate(result.user.mustChangePassword ? '/change-password' : '/dashboard');
       },
       onError: (error: any) => {
         toast({

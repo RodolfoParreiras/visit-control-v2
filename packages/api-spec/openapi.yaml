@@ -99,6 +99,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/User"
 
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change the authenticated user's password
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
   # ── Users ─────────────────────────────────────────────────────────────────
   /users:
     get:
@@ -908,7 +929,7 @@ components:
     # ── User ──────────────────────────────────────────────────────────────
     User:
       type: object
-      required: [id, name, login, role, status, createdAt]
+      required: [id, name, login, role, status, mustChangePassword, createdAt]
       properties:
         id:
           type: integer
@@ -922,6 +943,8 @@ components:
         status:
           type: string
           enum: [active, inactive]
+        mustChangePassword:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -946,6 +969,16 @@ components:
           type: string
           enum: [active, inactive]
           default: active
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
+          minLength: 8
 
     UserUpdate:
       type: object
