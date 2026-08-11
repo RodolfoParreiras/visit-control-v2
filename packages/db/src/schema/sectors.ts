@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -8,6 +8,8 @@ export const sectorsTable = pgTable("sectors", {
   abbreviation: text("abbreviation").notNull(),
   secretariat: text("secretariat").notNull(),
   status: text("status", { enum: ["active", "inactive"] }).notNull().default("active"),
+  queueEnabled: boolean("queue_enabled").notNull().default(false),
+  usesDesks: boolean("uses_desks").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

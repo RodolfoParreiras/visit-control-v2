@@ -1,7 +1,17 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, fieldConfigTable, labelConfigTable, usersTable } from "@visit-control/db";
+import {
+  db,
+  fieldConfigTable,
+  labelConfigTable,
+  usersTable,
+} from "@visit-control/db";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
 import { auditAction } from "../lib/audit";
+import {
+  UpdateFieldConfigBody,
+  UpdateLabelConfigBody,
+} from "@visit-control/api-zod";
+import { validate } from "../middlewares/validate";
 
 type AuthReq = Request & { user: typeof usersTable.$inferSelect };
 
@@ -16,7 +26,7 @@ router.get(
     const rows = await db.select().from(fieldConfigTable).limit(1);
     if (rows.length === 0) {
       res.json({
-        cpf: "optional",
+        cpf: "required",
         phone: "optional",
         company: "optional",
         city: "optional",
@@ -35,13 +45,13 @@ router.put(
   "/config/fields",
   requireAuth,
   requireAdmin,
+  validate("body", UpdateFieldConfigBody),
   async (req: Request, res: Response): Promise<void> => {
-    const { cpf, phone, company, city, responsible, reason, notes } =
-      req.body ?? {};
+    const { phone, company, city, responsible, reason, notes } = req.body ?? {};
 
     const validValues = ["hidden", "optional", "required"];
     const toSet = {
-      cpf: validValues.includes(cpf) ? cpf : "optional",
+      cpf: "required" as const,
       phone: validValues.includes(phone) ? phone : "optional",
       company: validValues.includes(company) ? company : "optional",
       city: validValues.includes(city) ? city : "optional",
@@ -56,10 +66,7 @@ router.put(
     if (existing.length === 0) {
       [result] = await db.insert(fieldConfigTable).values(toSet).returning();
     } else {
-      [result] = await db
-        .update(fieldConfigTable)
-        .set(toSet)
-        .returning();
+      [result] = await db.update(fieldConfigTable).set(toSet).returning();
     }
 
     await auditAction({
@@ -119,6 +126,7 @@ router.put(
   "/config/label",
   requireAuth,
   requireAdmin,
+  validate("body", UpdateLabelConfigBody),
   async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {};
 
@@ -139,11 +147,16 @@ router.put(
       labelHeight: Number(body.labelHeight) || DEFAULT_LABEL_CONFIG.labelHeight,
       marginTop: Number(body.marginTop) ?? DEFAULT_LABEL_CONFIG.marginTop,
       marginRight: Number(body.marginRight) ?? DEFAULT_LABEL_CONFIG.marginRight,
-      marginBottom: Number(body.marginBottom) ?? DEFAULT_LABEL_CONFIG.marginBottom,
+      marginBottom:
+        Number(body.marginBottom) ?? DEFAULT_LABEL_CONFIG.marginBottom,
       marginLeft: Number(body.marginLeft) ?? DEFAULT_LABEL_CONFIG.marginLeft,
       fontSize: Number(body.fontSize) || DEFAULT_LABEL_CONFIG.fontSize,
-      fontFamily: body.fontFamily ? String(body.fontFamily) : DEFAULT_LABEL_CONFIG.fontFamily,
-      printerModel: body.printerModel ? String(body.printerModel) : DEFAULT_LABEL_CONFIG.printerModel,
+      fontFamily: body.fontFamily
+        ? String(body.fontFamily)
+        : DEFAULT_LABEL_CONFIG.fontFamily,
+      printerModel: body.printerModel
+        ? String(body.printerModel)
+        : DEFAULT_LABEL_CONFIG.printerModel,
       elementsLayout: body.elementsLayout ? String(body.elementsLayout) : null,
       headerText: body.headerText ? String(body.headerText) : null,
       footerText: body.footerText ? String(body.footerText) : null,
@@ -155,10 +168,7 @@ router.put(
     if (existing.length === 0) {
       [result] = await db.insert(labelConfigTable).values(toSet).returning();
     } else {
-      [result] = await db
-        .update(labelConfigTable)
-        .set(toSet)
-        .returning();
+      [result] = await db.update(labelConfigTable).set(toSet).returning();
     }
 
     await auditAction({

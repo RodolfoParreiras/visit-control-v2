@@ -56,7 +56,7 @@ export default function VisitsList() {
   const cancelVisit = useCancelVisit();
 
   const { data: sectors } = useListSectors();
-  const { data: response, isLoading } = useListVisits({
+  const { data: response, isLoading, isError } = useListVisits({
     page,
     limit: 15,
     search: search || undefined,
@@ -194,6 +194,10 @@ export default function VisitsList() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-gray-500">Carregando...</TableCell>
+                  </TableRow>
+                ) : isError ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-red-600">Não foi possível carregar as visitas. Tente atualizar a página.</TableCell>
                   </TableRow>
                 ) : visits.length === 0 ? (
                   <TableRow>

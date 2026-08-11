@@ -1,10 +1,9 @@
-import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useLogin } from '@visit-control/api-client';
+import { useLogin, ApiError } from '@visit-control/api-client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Building2, KeyRound, Loader2, UserRound } from 'lucide-react';
+import { KeyRound, Loader2, ShieldCheck, UserRound } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -23,131 +22,157 @@ export default function Login() {
   const { toast } = useToast();
   const loginMutation = useLogin();
   const [, navigate] = useLocation();
-  
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      login: '',
-      password: '',
-    },
+    defaultValues: { login: '', password: '' },
   });
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate({ data }, {
       onSuccess: (result) => {
         login(result.token, result.user);
-        navigate(result.user.mustChangePassword ? '/change-password' : '/dashboard');
+        navigate(result.user.mustChangePassword ? '/change-password' : result.user.role === 'attendant' ? '/service-center' : '/dashboard');
       },
-      onError: (error: any) => {
+      onError: (error: unknown) => {
+        const apiError = error instanceof ApiError ? error : null;
+        const apiMessage = apiError?.data && typeof apiError.data === 'object'
+          ? (apiError.data as { error?: string }).error
+          : undefined;
+        const connectionFailed = !apiError;
         toast({
-          variant: "destructive",
-          title: "Falha na autenticação",
-          description: error?.response?.data?.error || "Usuário ou senha incorretos. Tente novamente.",
+          variant: 'destructive',
+          title: connectionFailed ? 'API indisponível' : 'Falha na autenticação',
+          description: connectionFailed
+            ? 'O frontend não conseguiu acessar o backend. Verifique a URL e se os serviços estão ativos.'
+            : apiMessage ?? 'Usuário ou senha incorretos. Tente novamente.',
         });
-      }
+      },
     });
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
-      <div className="max-w-md w-full">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="bg-primary text-primary-foreground p-4 rounded-xl shadow-lg mb-4">
-            <Building2 className="w-10 h-10" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
-            Controle de Visitantes
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider font-semibold">
-            Prefeitura Municipal de Paraíba do Sul
+    <div className="min-h-screen bg-white lg:grid lg:grid-cols-[48%_52%]">
+      <section className="relative hidden min-h-screen overflow-hidden bg-[#012c61] lg:flex lg:items-center lg:justify-center">
+        <div className="absolute inset-0 opacity-[0.07]" aria-hidden="true">
+          <div className="absolute -left-20 -top-24 h-80 w-80 rounded-full border border-white" />
+          <div className="absolute left-24 top-20 h-44 w-44 rotate-45 border border-white" />
+          <div className="absolute -bottom-32 -right-20 h-96 w-96 rounded-full border border-white" />
+          <div className="absolute bottom-20 right-24 h-52 w-52 rotate-12 border border-white" />
+        </div>
+
+        <div className="relative z-10 flex w-full max-w-xl flex-col items-center px-12 text-center">
+          <img
+            src="/logo-prefeitura.png"
+            alt="Prefeitura de Paraíba do Sul"
+            className="w-full max-w-[430px] object-contain drop-shadow-2xl"
+          />
+          <div className="mt-10 h-1 w-32 rounded-full bg-[#b2d233]" />
+          <p className="mt-6 max-w-md text-sm leading-relaxed text-white/70">
+            Gestão integrada, segura e eficiente para o atendimento aos visitantes.
           </p>
         </div>
+      </section>
 
-        {/* Login Card */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-xl overflow-hidden">
-          <div className="p-8">
-            <h2 className="text-xl font-semibold mb-6 text-gray-900 dark:text-gray-100">Acesso ao Sistema</h2>
-            
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-                <FormField
-                  control={form.control}
-                  name="login"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Usuário</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <div className="absolute left-3 top-2.5 text-gray-400">
-                            <UserRound className="w-5 h-5" />
-                          </div>
-                          <Input 
-                            placeholder="Digite seu login" 
-                            className="pl-10 h-11 bg-gray-50/50 dark:bg-gray-800/50" 
-                            autoCapitalize="none"
-                            autoComplete="off"
-                            autoCorrect="off"
-                            {...field} 
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-gray-700 dark:text-gray-300">Senha</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <div className="absolute left-3 top-2.5 text-gray-400">
-                            <KeyRound className="w-5 h-5" />
-                          </div>
-                          <Input 
-                            type="password" 
-                            placeholder="Digite sua senha" 
-                            className="pl-10 h-11 bg-gray-50/50 dark:bg-gray-800/50"
-                            {...field} 
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button 
-                  type="submit" 
-                  className="w-full h-11 text-base font-semibold shadow-md"
-                  disabled={loginMutation.isPending}
-                >
-                  {loginMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Autenticando...
-                    </>
-                  ) : (
-                    "Entrar"
-                  )}
-                </Button>
-              </form>
-            </Form>
-          </div>
-          
-          {/* Footer security note */}
-          <div className="bg-gray-50 dark:bg-gray-800/50 px-8 py-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400 text-center flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
-              Acesso restrito a funcionários autorizados
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-white px-6 py-10 sm:px-12">
+        <div className="absolute left-0 top-0 h-1.5 w-full bg-[#b2d233] lg:hidden" />
+        <div className="w-full max-w-md">
+          <div className="mb-10 text-center">
+            <div
+              role="img"
+              aria-label="Brasão da Prefeitura de Paraíba do Sul"
+              className="mx-auto mb-5 h-24 w-24 bg-[#012c61]"
+              style={{
+                WebkitMaskImage: "url('/brasao.png')",
+                maskImage: "url('/brasao.png')",
+                WebkitMaskPosition: 'center',
+                maskPosition: 'center',
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskSize: 'contain',
+                maskSize: 'contain',
+              }}
+            />
+            <h1 className="text-3xl font-bold tracking-tight text-[#012c61]">
+              Sistema de Controle
+              <span className="block">de Visitantes</span>
+            </h1>
+            <p className="mt-3 text-sm text-slate-500">
+              Entre com suas credenciais para acessar o sistema.
             </p>
           </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="mx-auto max-w-sm space-y-5">
+              <FormField
+                control={form.control}
+                name="login"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium text-[#012c61]">Login</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <UserRound className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#012c61]" />
+                        <Input
+                          placeholder="Digite seu login"
+                          className="h-10 border-[#012c61]/35 bg-white pl-11 text-slate-900 shadow-sm focus-visible:border-[#012c61] focus-visible:ring-[#012c61]/25"
+                          autoCapitalize="none"
+                          autoComplete="username"
+                          autoCorrect="off"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-medium text-[#012c61]">Senha</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-[#012c61]" />
+                        <Input
+                          type="password"
+                          placeholder="Digite sua senha"
+                          className="h-10 border-[#012c61]/35 bg-white pl-11 text-slate-900 shadow-sm focus-visible:border-[#012c61] focus-visible:ring-[#012c61]/25"
+                          autoComplete="current-password"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <Button
+                type="submit"
+                className="group relative mx-auto flex h-10 w-full max-w-xs overflow-hidden border-0 bg-[#012c61] text-sm font-semibold text-white shadow-lg shadow-[#012c61]/20 hover:bg-[#01244f]"
+                disabled={loginMutation.isPending}
+              >
+                <span
+                  className="absolute inset-y-0 left-0 w-1.5 bg-[#b2d233] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
+                  aria-hidden="true"
+                />
+                {loginMutation.isPending ? (
+                  <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Autenticando...</>
+                ) : 'Entrar'}
+              </Button>
+            </form>
+          </Form>
+
+          <div className="mt-8 flex items-center justify-center gap-2 text-xs text-slate-400">
+            <ShieldCheck className="h-4 w-4 text-[#012c61]" />
+            Acesso restrito a funcionários autorizados
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -22,6 +22,8 @@ import ConfigLabel from "@/pages/config/label";
 import Reports from "@/pages/reports";
 import AuditLogs from "@/pages/audit";
 import NotFound from "@/pages/not-found";
+import ServiceCenter from "@/pages/service-center";
+import CallDisplay from "@/pages/call-display";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,6 +38,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/call-display" component={CallDisplay} />
       <Route path="/change-password">
         <PrivateRoute allowPasswordChange>
           <ChangePassword />
@@ -50,6 +53,12 @@ function Router() {
       <Route path="/dashboard">
         <PrivateRoute>
           <Dashboard />
+        </PrivateRoute>
+      </Route>
+
+      <Route path="/service-center">
+        <PrivateRoute>
+          <ServiceCenter />
         </PrivateRoute>
       </Route>
 

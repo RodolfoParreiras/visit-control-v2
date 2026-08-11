@@ -16,3 +16,4 @@ apps/*/dist/
 
 # Local
 *.local
+node_modules

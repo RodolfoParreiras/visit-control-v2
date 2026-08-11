@@ -2,6 +2,8 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, auditLogsTable, usersTable } from "@visit-control/db";
 import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { ListAuditLogsQueryParams } from "@visit-control/api-zod";
+import { validate } from "../middlewares/validate";
 
 const router: IRouter = Router();
 
@@ -9,6 +11,7 @@ router.get(
   "/audit",
   requireAuth,
   requireAdmin,
+  validate("query", ListAuditLogsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const {
       userId,
@@ -24,7 +27,8 @@ router.get(
     const offset = (pageNum - 1) * limitNum;
 
     const conditions: SQL[] = [];
-    if (userId) conditions.push(eq(auditLogsTable.userId, parseInt(userId, 10)));
+    if (userId)
+      conditions.push(eq(auditLogsTable.userId, parseInt(userId, 10)));
     if (action) conditions.push(eq(auditLogsTable.action, action));
     if (dateFrom) {
       conditions.push(

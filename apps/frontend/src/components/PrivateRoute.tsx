@@ -32,7 +32,11 @@ export function PrivateRoute({ children, adminOnly = false, allowPasswordChange 
   }
 
   if (!user.mustChangePassword && allowPasswordChange) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to={user.role === 'attendant' ? '/service-center' : '/dashboard'} />;
+  }
+
+  if (user.role === 'attendant' && !allowPasswordChange && location !== '/service-center') {
+    return <Redirect to="/service-center" />;
   }
 
   if (adminOnly && user.role !== 'admin') {

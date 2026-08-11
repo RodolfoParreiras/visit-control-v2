@@ -67,17 +67,27 @@ nano .env
 
 Edite o `.env` ajustando pelo menos estas variáveis:
 
-| Variável          | Descrição                                               |
-|-------------------|---------------------------------------------------------|
-| `DB_PASSWORD`     | Senha do banco de dados (use algo forte em produção)   |
-| `SESSION_SECRET`  | Chave secreta JWT (mínimo 32 caracteres aleatórios)    |
+| Variável          | Descrição                                                 |
+| ----------------- | --------------------------------------------------------- |
+| `DB_PASSWORD`     | Senha do banco de dados (use algo forte em produção)      |
+| `SESSION_SECRET`  | Chave secreta JWT (mínimo 32 caracteres aleatórios)       |
 | `ALLOWED_ORIGINS` | URL do frontend (ex: `https://visitas.prefeitura.gov.br`) |
 
 ### 4. Iniciar a aplicação
 
 ```bash
-docker compose up -d --build
+bash ./scripts/start.sh
 ```
+
+No Windows, execute `scripts\start.cmd` diretamente no CMD. No PowerShell,
+use `./scripts/start.ps1`. Na primeira execução, o script solicita no próprio
+terminal o nome, login, senha e confirmação da senha do administrador antes de
+iniciar o sistema. Nas execuções seguintes, a solicitação é ignorada porque já
+existe um usuário no banco.
+
+No Git Bash ou em um terminal Bash do Linux/WSL, execute exatamente
+`bash ./scripts/start.sh`. O script já trata automaticamente a conversão de
+caminhos feita pelo Git Bash no Windows.
 
 Aguarde alguns segundos para o banco inicializar. O schema e o usuário administrador são criados automaticamente na primeira vez que o volume do banco for inicializado.
 
@@ -86,7 +96,14 @@ A aplicação estará disponível em:
 - **http://seu-servidor** — Interface do sistema
 - **http://seu-servidor/api/health** — Health check da API
 
-Credenciais iniciais: **login:** `admin` / **senha:** `admin`
+Em uma instalação Docker local, acesse **http://localhost** sem adicionar a
+porta `3000`. Essa porta é usada apenas pelo frontend de desenvolvimento e
+exige que o backend local também esteja rodando na porta `3001`.
+
+Não existem credenciais administrativas fixas e os dados do primeiro
+administrador não são armazenados nem transportados pelo `.env`. O cadastro é
+executado por um comando interativo dentro do backend antes de os serviços
+serem iniciados.
 
 ---
 
@@ -125,6 +142,8 @@ PORT=3000 pnpm dev:frontend
 ```
 
 O frontend roda em http://localhost:3000 com proxy automático para a API em localhost:3001.
+Na primeira execução interativa do backend, o terminal solicitará o nome, o
+login, a senha e a confirmação da senha do administrador inicial.
 
 ---
 
@@ -132,9 +151,13 @@ O frontend roda em http://localhost:3000 com proxy automático para a API em loc
 
 Para atualizar a aplicação para uma nova versão:
 
+> Antes desta atualização, corrija eventuais visitantes antigos sem CPF. A
+> migração interrompe a inicialização e informa o problema caso encontre algum,
+> pois o sistema não pode inventar um documento válido para esses registros.
+
 ```bash
 git pull
-docker compose up -d --build
+sh ./scripts/start.sh
 ```
 
 ---
@@ -194,15 +217,15 @@ docker compose restart nginx
 
 ## Variáveis de Ambiente
 
-| Variável          | Padrão                                        | Descrição                                    |
-|-------------------|-----------------------------------------------|----------------------------------------------|
-| `DATABASE_URL`    | `postgresql://visit_user:visit_pass@db:5432/visit_control` | URL de conexão com o PostgreSQL |
-| `SESSION_SECRET`  | —                                             | Chave secreta para assinatura JWT (obrigatória) |
-| `NODE_ENV`        | `production`                                  | Ambiente de execução                         |
-| `PORT`            | `3001`                                        | Porta do backend                             |
-| `ALLOWED_ORIGINS` | `http://localhost`                            | Origens CORS permitidas (separadas por vírgula) |
-| `LOG_LEVEL`       | `info`                                        | Nível de log (trace/debug/info/warn/error)   |
-| `DB_PASSWORD`     | `visit_pass`                                  | Senha do PostgreSQL                          |
+| Variável                 | Padrão                                                     | Descrição                                        |
+| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------ |
+| `DATABASE_URL`           | `postgresql://visit_user:visit_pass@db:5432/visit_control` | URL de conexão com o PostgreSQL                  |
+| `SESSION_SECRET`         | —                                                          | Chave secreta para assinatura JWT (obrigatória)  |
+| `NODE_ENV`               | `production`                                               | Ambiente de execução                             |
+| `PORT`                   | `3001`                                                     | Porta do backend                                 |
+| `ALLOWED_ORIGINS`        | `http://localhost`                                         | Origens CORS permitidas (separadas por vírgula)  |
+| `LOG_LEVEL`              | `info`                                                     | Nível de log (trace/debug/info/warn/error)       |
+| `DB_PASSWORD`            | `visit_pass`                                               | Senha do PostgreSQL                              |
 
 ---
 
@@ -233,6 +256,14 @@ Se você modificar a especificação OpenAPI em `packages/api-spec/openapi.yaml`
 ```bash
 pnpm --filter @visit-control/api-spec run codegen
 ```
+
+## Central de Atendimento
+
+- Ative a fila no cadastro do setor e escolha entre chamada geral ou atendimento por mesas.
+- Para setores com mesas, use o botão de gerenciamento na listagem de setores para cadastrar, ativar ou desativar cada mesa.
+- Cadastre usuários com o perfil **Atendente** e vincule cada um ao seu setor. Esse perfil acessa somente a Central de Atendimento.
+- Toda nova visita destinada a um setor habilitado entra automaticamente na fila FIFO daquele setor.
+- A recepção pode abrir **Visor de Chamadas** no menu lateral. O visor recebe novas chamadas em tempo real e faz o anúncio por voz quando o navegador permite áudio.
 
 ---
 
@@ -282,12 +313,12 @@ docker compose logs -f --tail=100
 
 ## Tecnologias
 
-| Camada       | Tecnologia                             |
-|--------------|----------------------------------------|
+| Camada       | Tecnologia                              |
+| ------------ | --------------------------------------- |
 | Frontend     | React 19, Vite, Tailwind CSS v4, Wouter |
-| UI           | Radix UI, shadcn/ui, Recharts          |
-| Backend      | Node.js 22, Express 5, Drizzle ORM     |
-| Banco        | PostgreSQL 16                          |
-| Autenticação | JWT (jsonwebtoken) + bcryptjs          |
-| Proxy        | Nginx Alpine                           |
-| Containers   | Docker + Docker Compose                |
+| UI           | Radix UI, shadcn/ui, Recharts           |
+| Backend      | Node.js 22, Express 5, Drizzle ORM      |
+| Banco        | PostgreSQL 16                           |
+| Autenticação | JWT (jsonwebtoken) + bcryptjs           |
+| Proxy        | Nginx Alpine                            |
+| Containers   | Docker + Docker Compose                 |

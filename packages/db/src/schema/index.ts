@@ -5,3 +5,4 @@ export * from "./visits";
 export * from "./audit-logs";
 export * from "./field-config";
 export * from "./label-config";
+export * from "./service";

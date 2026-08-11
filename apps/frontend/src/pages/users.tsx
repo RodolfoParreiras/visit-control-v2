@@ -6,13 +6,15 @@ import {
   useUpdateUser, 
   useDeleteUser,
   User,
-  getListUsersQueryKey
+  getListUsersQueryKey,
+  useListSectors
 } from '@visit-control/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { UserCog, Plus, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -23,21 +25,38 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { format } from 'date-fns';
 
+const defaultVisitorPermissions = {
+  editVisitorName: true,
+  editVisitorCpf: true,
+  editVisitorPhone: true,
+  editVisitorCompany: true,
+  editVisitorCity: true,
+};
+
 const userSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   login: z.string().min(1, 'Login é obrigatório'),
-  password: z.string().optional(),
-  role: z.enum(['admin', 'receptionist']),
+  password: z
+    .string()
+    .optional()
+    .refine((value) => !value || value.length >= 8, 'A senha deve ter pelo menos 8 caracteres'),
+  role: z.enum(['admin', 'receptionist', 'attendant']),
+  sectorId: z.number().int().positive().nullable().optional(),
   status: z.enum(['active', 'inactive']),
-}).refine(data => {
-  // Se for novo usuário, a senha é obrigatória (validaremos o contexto da edição no submit)
-  return true;
-});
+  permissions: z.object({
+    editVisitorName: z.boolean(),
+    editVisitorCpf: z.boolean(),
+    editVisitorPhone: z.boolean(),
+    editVisitorCompany: z.boolean(),
+    editVisitorCity: z.boolean(),
+  }),
+}).refine(data => data.role !== 'attendant' || !!data.sectorId, { message: 'Setor é obrigatório para atendentes', path: ['sectorId'] });
 
 type UserFormValues = z.infer<typeof userSchema>;
 
 export default function Users() {
   const { data: users, isLoading } = useListUsers();
+  const { data: sectors } = useListSectors({ status: 'active' });
   const queryClient = useQueryClient();
   const { toast } = useToast();
   
@@ -56,7 +75,9 @@ export default function Users() {
       login: '',
       password: '',
       role: 'receptionist',
+      sectorId: null,
       status: 'active',
+      permissions: defaultVisitorPermissions,
     },
   });
 
@@ -67,7 +88,9 @@ export default function Users() {
       login: '',
       password: '',
       role: 'receptionist',
+      sectorId: null,
       status: 'active',
+      permissions: defaultVisitorPermissions,
     });
     setIsDialogOpen(true);
   };
@@ -79,12 +102,15 @@ export default function Users() {
       login: user.login,
       password: '', // Não preencher a senha na edição
       role: user.role,
+      sectorId: user.sectorId ?? null,
       status: user.status,
+      permissions: { ...defaultVisitorPermissions, ...user.permissions },
     });
     setIsDialogOpen(true);
   };
 
   const onSubmit = (data: UserFormValues) => {
+    if (data.role !== 'attendant') data.sectorId = null;
     if (editingUser) {
       // Remover a senha do payload se estiver em branco na edição
       const updateData = { ...data };
@@ -207,7 +233,7 @@ export default function Users() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
           </DialogHeader>
@@ -247,6 +273,7 @@ export default function Users() {
                       <SelectContent>
                         <SelectItem value="admin">Administrador</SelectItem>
                         <SelectItem value="receptionist">Recepcionista</SelectItem>
+                        <SelectItem value="attendant">Atendente</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -270,6 +297,42 @@ export default function Users() {
                   </FormItem>
                 )} />
               </div>
+              {form.watch('role') === 'attendant' && (
+                <FormField control={form.control} name="sectorId" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Setor de atendimento</FormLabel>
+                    <Select value={field.value ? String(field.value) : ''} onValueChange={(value) => field.onChange(Number(value))}>
+                      <FormControl><SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger></FormControl>
+                      <SelectContent>{sectors?.filter((sector) => sector.queueEnabled).map((sector) => <SelectItem key={sector.id} value={String(sector.id)}>{sector.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+              {form.watch('role') === 'receptionist' && (
+                <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+                  <div>
+                    <h3 className="font-medium text-gray-900">Permissões de edição do visitante</h3>
+                    <p className="text-sm text-gray-500">Escolha quais informações este recepcionista poderá alterar.</p>
+                  </div>
+                  {([
+                    ['permissions.editVisitorName', 'Nome completo'],
+                    ['permissions.editVisitorCpf', 'CPF'],
+                    ['permissions.editVisitorPhone', 'Telefone'],
+                    ['permissions.editVisitorCompany', 'Empresa/Órgão'],
+                    ['permissions.editVisitorCity', 'Cidade'],
+                  ] as const).map(([name, label]) => (
+                    <FormField key={name} control={form.control} name={name} render={({ field }) => (
+                      <FormItem className="flex items-center justify-between gap-4 rounded-md bg-white px-3 py-2 shadow-sm">
+                        <FormLabel className="m-0 font-normal">{label}</FormLabel>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )} />
+                  ))}
+                </div>
+              )}
               <DialogFooter className="mt-6">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                 <Button type="submit" disabled={createUser.isPending || updateUser.isPending}>Salvar</Button>

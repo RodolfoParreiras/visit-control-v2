@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isLoading = !!token && isQueryLoading && !authenticatedUser;
 
   return (
-    <AuthContext.Provider value={{ user: authenticatedUser, isLoading, login, updateUser, logout }}>
+    <AuthContext.Provider value={{ user: authenticatedUser ?? null, isLoading, login, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

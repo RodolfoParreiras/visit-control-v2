@@ -1,7 +1,7 @@
 import "dotenv/config";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { pool } from "@visit-control/db";
+import { pool, runMigrations } from "@visit-control/db";
 import { seedAdminUser } from "./lib/seed";
 
 const rawPort = process.env["PORT"] ?? "3001";
@@ -12,28 +12,24 @@ if (Number.isNaN(port) || port <= 0) {
   process.exit(1);
 }
 
-// Garante que o admin padrão existe antes de aceitar requisições
-await pool.query(
-  `
-    ALTER TABLE users
-      ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE;
-    ALTER TABLE visits
-      ADD COLUMN IF NOT EXISTS visitor_name TEXT,
-      ADD COLUMN IF NOT EXISTS visitor_cpf TEXT,
-      ADD COLUMN IF NOT EXISTS visitor_phone TEXT,
-      ADD COLUMN IF NOT EXISTS visitor_company TEXT,
-      ADD COLUMN IF NOT EXISTS visitor_city TEXT;
-  `,
-);
+// Atualiza o schema e configura o primeiro administrador antes de aceitar
+// requisições.
+await runMigrations();
 await seedAdminUser();
 
 const server = app.listen(port, () => {
-  logger.info({ port, env: process.env.NODE_ENV ?? "development" }, "🚀 Servidor iniciado");
+  logger.info(
+    { port, env: process.env.NODE_ENV ?? "development" },
+    "🚀 Servidor iniciado",
+  );
 });
 
 // ── Graceful shutdown ──────────────────────────────────────────────────────
 async function shutdown(signal: string): Promise<void> {
-  logger.info({ signal }, "Sinal de encerramento recebido — desligando servidor...");
+  logger.info(
+    { signal },
+    "Sinal de encerramento recebido — desligando servidor...",
+  );
 
   server.close(async () => {
     logger.info("Servidor HTTP encerrado");

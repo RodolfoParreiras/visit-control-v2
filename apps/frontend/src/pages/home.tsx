@@ -8,7 +8,7 @@ export default function Home() {
   if (isLoading) return null;
   
   if (user) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to={user.role === 'attendant' ? '/service-center' : '/dashboard'} />;
   }
   
   return <Redirect to="/login" />;

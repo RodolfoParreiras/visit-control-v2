@@ -4,9 +4,9 @@ import { z } from "zod/v4";
 
 export const fieldConfigTable = pgTable("field_config", {
   id: serial("id").primaryKey(),
-  cpf: text("cpf", { enum: ["hidden", "optional", "required"] })
+  cpf: text("cpf", { enum: ["required"] })
     .notNull()
-    .default("optional"),
+    .default("required"),
   phone: text("phone", { enum: ["hidden", "optional", "required"] })
     .notNull()
     .default("optional"),
@@ -30,8 +30,8 @@ export const fieldConfigTable = pgTable("field_config", {
     .defaultNow(),
 });
 
-export const insertFieldConfigSchema = createInsertSchema(fieldConfigTable).omit(
-  { id: true, updatedAt: true },
-);
+export const insertFieldConfigSchema = createInsertSchema(
+  fieldConfigTable,
+).omit({ id: true, updatedAt: true });
 export type InsertFieldConfig = z.infer<typeof insertFieldConfigSchema>;
 export type FieldConfig = typeof fieldConfigTable.$inferSelect;

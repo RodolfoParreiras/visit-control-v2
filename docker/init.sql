@@ -11,10 +11,11 @@ CREATE TABLE IF NOT EXISTS users (
   login         TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role          TEXT NOT NULL DEFAULT 'receptionist'
-                  CHECK (role IN ('admin', 'receptionist')),
+                  CHECK (role IN ('admin', 'receptionist', 'attendant')),
   status        TEXT NOT NULL DEFAULT 'active'
                   CHECK (status IN ('active', 'inactive')),
   must_change_password BOOLEAN NOT NULL DEFAULT FALSE,
+  permissions JSONB NOT NULL DEFAULT '{"editVisitorName":true,"editVisitorCpf":true,"editVisitorPhone":true,"editVisitorCompany":true,"editVisitorCity":true}'::jsonb,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ
 );
@@ -29,19 +30,25 @@ CREATE TABLE IF NOT EXISTS sectors (
   secretariat  TEXT NOT NULL,
   status       TEXT NOT NULL DEFAULT 'active'
                  CHECK (status IN ('active', 'inactive')),
+  queue_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+  uses_desks    BOOLEAN NOT NULL DEFAULT FALSE,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS visitors (
   id         SERIAL PRIMARY KEY,
   name       TEXT NOT NULL,
-  cpf        TEXT,
+  cpf        TEXT NOT NULL,
   phone      TEXT,
   company    TEXT,
   city       TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS sector_id INTEGER REFERENCES sectors(id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS visitors_cpf_unique ON visitors (cpf);
 
 -- ── Tabelas dependentes ──────────────────────────────────────────────────────
 
@@ -64,12 +71,42 @@ CREATE TABLE IF NOT EXISTS visits (
 
     -- snapshot dos dados do visitante no momento da visita
   visitor_name    TEXT,
-  visitor_cpf     TEXT,
+  visitor_cpf     TEXT NOT NULL,
   visitor_phone   TEXT,
   visitor_company TEXT,
   visitor_city    TEXT,
   
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS service_desks (
+  id SERIAL PRIMARY KEY,
+  sector_id INTEGER NOT NULL REFERENCES sectors(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (sector_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS service_queue (
+  id SERIAL PRIMARY KEY,
+  visit_id INTEGER NOT NULL UNIQUE REFERENCES visits(id) ON DELETE CASCADE,
+  sector_id INTEGER NOT NULL REFERENCES sectors(id),
+  status TEXT NOT NULL DEFAULT 'waiting' CHECK (status IN ('waiting', 'called', 'completed', 'cancelled')),
+  queued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  called_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  desk_id INTEGER REFERENCES service_desks(id),
+  attendant_user_id INTEGER REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS service_calls (
+  id SERIAL PRIMARY KEY,
+  queue_id INTEGER NOT NULL REFERENCES service_queue(id) ON DELETE CASCADE,
+  sector_id INTEGER NOT NULL REFERENCES sectors(id),
+  desk_id INTEGER REFERENCES service_desks(id),
+  attendant_user_id INTEGER NOT NULL REFERENCES users(id),
+  called_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -88,8 +125,8 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 
 CREATE TABLE IF NOT EXISTS field_config (
   id          SERIAL PRIMARY KEY,
-  cpf         TEXT NOT NULL DEFAULT 'optional'
-                CHECK (cpf IN ('hidden', 'optional', 'required')),
+  cpf         TEXT NOT NULL DEFAULT 'required'
+                CHECK (cpf = 'required'),
   phone       TEXT NOT NULL DEFAULT 'optional'
                 CHECK (phone IN ('hidden', 'optional', 'required')),
   company     TEXT NOT NULL DEFAULT 'optional'
@@ -133,13 +170,12 @@ CREATE TABLE IF NOT EXISTS label_config (
 );
 
 -- ── Dados iniciais ─────────────────────────────────────────────────────────────
--- O usuário administrador padrão é criado pelo backend no startup via bcryptjs
--- (ver apps/backend/src/lib/seed.ts). Não inserimos aqui para evitar
--- incompatibilidade de formato de hash entre pgcrypto e bcryptjs.
+-- O primeiro administrador é solicitado e criado pelo backend no startup
+-- (ver apps/backend/src/lib/seed.ts).
 
 -- Configuração de campos padrão
 INSERT INTO field_config (cpf, phone, company, city, responsible, reason, notes)
-VALUES ('optional', 'optional', 'optional', 'optional', 'optional', 'optional', 'optional')
+VALUES ('required', 'optional', 'optional', 'optional', 'optional', 'optional', 'optional')
 ON CONFLICT DO NOTHING;
 
 -- Configuração de etiqueta padrão

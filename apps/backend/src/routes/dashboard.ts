@@ -1,7 +1,15 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, visitsTable, visitorsTable, sectorsTable } from "@visit-control/db";
+import {
+  db,
+  visitsTable,
+  visitorsTable,
+  sectorsTable,
+} from "@visit-control/db";
 import { eq, sql, desc, and, gte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
+import { GetRecentVisitsQueryParams } from "@visit-control/api-zod";
+import { validate } from "../middlewares/validate";
+import { resolveVisitorSnapshot } from "../lib/visitor-snapshot";
 
 const router: IRouter = Router();
 
@@ -139,6 +147,7 @@ router.get(
 router.get(
   "/dashboard/recent-visits",
   requireAuth,
+  validate("query", GetRecentVisitsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const limit = Math.min(
       50,
@@ -162,6 +171,13 @@ router.get(
         exitUserId: visitsTable.exitUserId,
         cancelReason: visitsTable.cancelReason,
         createdAt: visitsTable.createdAt,
+        visitorSnapshot: {
+          name: visitsTable.visitorName,
+          cpf: visitsTable.visitorCpf,
+          phone: visitsTable.visitorPhone,
+          company: visitsTable.visitorCompany,
+          city: visitsTable.visitorCity,
+        },
         visitor: {
           id: visitorsTable.id,
           name: visitorsTable.name,
@@ -188,20 +204,23 @@ router.get(
       .limit(limit);
 
     res.json(
-      rows.map((r) => ({
-        ...r,
-        createdAt: r.createdAt.toISOString(),
-        visitor: r.visitor
-          ? {
-              ...r.visitor,
-              createdAt: r.visitor.createdAt.toISOString(),
-              updatedAt: r.visitor.updatedAt?.toISOString() ?? null,
-            }
-          : null,
-        sector: r.sector
-          ? { ...r.sector, createdAt: r.sector.createdAt.toISOString() }
-          : null,
-      })),
+      rows.map((r) => {
+        const { visitorSnapshot, ...visit } = r;
+        return {
+          ...visit,
+          createdAt: r.createdAt.toISOString(),
+          visitor: r.visitor
+            ? {
+                ...resolveVisitorSnapshot(r.visitor, visitorSnapshot),
+                createdAt: r.visitor.createdAt.toISOString(),
+                updatedAt: r.visitor.updatedAt?.toISOString() ?? null,
+              }
+            : null,
+          sector: r.sector
+            ? { ...r.sector, createdAt: r.sector.createdAt.toISOString() }
+            : null,
+        };
+      }),
     );
   },
 );

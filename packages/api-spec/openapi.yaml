@@ -28,6 +28,8 @@ tags:
     description: Audit logs
   - name: config
     description: System configuration
+  - name: service
+    description: Service center and visitor calling
 
 paths:
   /healthz:
@@ -137,7 +139,7 @@ paths:
           name: role
           schema:
             type: string
-            enum: [admin, receptionist]
+            enum: [admin, receptionist, attendant]
         - in: query
           name: status
           schema:
@@ -478,12 +480,12 @@ paths:
           name: dateFrom
           schema:
             type: string
-            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
         - in: query
           name: dateTo
           schema:
             type: string
-            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
         - in: query
           name: userId
           schema:
@@ -723,12 +725,12 @@ paths:
           name: dateFrom
           schema:
             type: string
-            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
         - in: query
           name: dateTo
           schema:
             type: string
-            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
         - in: query
           name: sectorId
           schema:
@@ -771,12 +773,12 @@ paths:
           name: dateFrom
           schema:
             type: string
-            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
         - in: query
           name: dateTo
           schema:
             type: string
-            format: date
+            pattern: '^\d{4}-\d{2}-\d{2}$'
         - in: query
           name: page
           schema:
@@ -927,9 +929,24 @@ components:
           $ref: "#/components/schemas/User"
 
     # ── User ──────────────────────────────────────────────────────────────
+    UserPermissions:
+      type: object
+      required: [editVisitorName, editVisitorCpf, editVisitorPhone, editVisitorCompany, editVisitorCity]
+      properties:
+        editVisitorName:
+          type: boolean
+        editVisitorCpf:
+          type: boolean
+        editVisitorPhone:
+          type: boolean
+        editVisitorCompany:
+          type: boolean
+        editVisitorCity:
+          type: boolean
+
     User:
       type: object
-      required: [id, name, login, role, status, mustChangePassword, createdAt]
+      required: [id, name, login, role, status, mustChangePassword, permissions, createdAt]
       properties:
         id:
           type: integer
@@ -939,12 +956,16 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, receptionist]
+          enum: [admin, receptionist, attendant]
+        sectorId:
+          type: ["integer", "null"]
         status:
           type: string
           enum: [active, inactive]
         mustChangePassword:
           type: boolean
+        permissions:
+          $ref: "#/components/schemas/UserPermissions"
         createdAt:
           type: string
           format: date-time
@@ -962,13 +983,18 @@ components:
           type: string
         password:
           type: string
+          minLength: 8
         role:
           type: string
-          enum: [admin, receptionist]
+          enum: [admin, receptionist, attendant]
+        sectorId:
+          type: ["integer", "null"]
         status:
           type: string
           enum: [active, inactive]
           default: active
+        permissions:
+          $ref: "#/components/schemas/UserPermissions"
 
     ChangePasswordInput:
       type: object
@@ -989,17 +1015,22 @@ components:
           type: string
         password:
           type: string
+          minLength: 8
         role:
           type: string
-          enum: [admin, receptionist]
+          enum: [admin, receptionist, attendant]
+        sectorId:
+          type: ["integer", "null"]
         status:
           type: string
           enum: [active, inactive]
+        permissions:
+          $ref: "#/components/schemas/UserPermissions"
 
     # ── Sector ────────────────────────────────────────────────────────────
     Sector:
       type: object
-      required: [id, name, abbreviation, secretariat, status, createdAt]
+      required: [id, name, abbreviation, secretariat, status, queueEnabled, usesDesks, createdAt]
       properties:
         id:
           type: integer
@@ -1012,6 +1043,10 @@ components:
         status:
           type: string
           enum: [active, inactive]
+        queueEnabled:
+          type: boolean
+        usesDesks:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -1030,6 +1065,12 @@ components:
           type: string
           enum: [active, inactive]
           default: active
+        queueEnabled:
+          type: boolean
+          default: false
+        usesDesks:
+          type: boolean
+          default: false
 
     SectorUpdate:
       type: object
@@ -1043,18 +1084,22 @@ components:
         status:
           type: string
           enum: [active, inactive]
+        queueEnabled:
+          type: boolean
+        usesDesks:
+          type: boolean
 
     # ── Visitor ───────────────────────────────────────────────────────────
     Visitor:
       type: object
-      required: [id, name, createdAt]
+      required: [id, name, cpf, createdAt]
       properties:
         id:
           type: integer
         name:
           type: string
         cpf:
-          type: ["string", "null"]
+          type: string
         phone:
           type: ["string", "null"]
         company:
@@ -1070,7 +1115,7 @@ components:
 
     VisitorInput:
       type: object
-      required: [name]
+      required: [name, cpf]
       properties:
         name:
           type: string
@@ -1099,14 +1144,14 @@ components:
 
     VisitorWithHistory:
       type: object
-      required: [id, name, createdAt, visits]
+      required: [id, name, cpf, createdAt, visits]
       properties:
         id:
           type: integer
         name:
           type: string
         cpf:
-          type: ["string", "null"]
+          type: string
         phone:
           type: ["string", "null"]
         company:
@@ -1142,7 +1187,17 @@ components:
     # ── Visit ─────────────────────────────────────────────────────────────
     Visit:
       type: object
-      required: [id, visitorId, sectorId, status, entryDate, entryTime, entryUserId, createdAt]
+      required:
+        [
+          id,
+          visitorId,
+          sectorId,
+          status,
+          entryDate,
+          entryTime,
+          entryUserId,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -1190,6 +1245,9 @@ components:
     VisitInput:
       type: object
       required: [sectorId]
+      anyOf:
+        - required: [visitorId]
+        - required: [visitorName, visitorCpf]
       properties:
         visitorId:
           type: ["integer", "null"]
@@ -1257,7 +1315,8 @@ components:
     # ── Dashboard ─────────────────────────────────────────────────────────
     DashboardStats:
       type: object
-      required: [todayTotal, currentlyPresent, todayExits, weekTotal, monthTotal]
+      required:
+        [todayTotal, currentlyPresent, todayExits, weekTotal, monthTotal]
       properties:
         todayTotal:
           type: integer
@@ -1360,7 +1419,7 @@ components:
       properties:
         cpf:
           type: string
-          enum: [hidden, optional, required]
+          enum: [required]
         phone:
           type: string
           enum: [hidden, optional, required]

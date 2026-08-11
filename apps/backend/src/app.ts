@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -24,7 +24,7 @@ app.use(
 
 // ── CORS ───────────────────────────────────────────────────────────────────
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim()).filter(Boolean)
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim().replace(/\/+$/, "")).filter(Boolean)
   : [];
 
 app.use(
@@ -37,10 +37,12 @@ app.use(
         return callback(null, true);
       }
       // Verifica lista explícita de origens permitidas
-      if (allowedOrigins.includes(origin)) {
+      if (allowedOrigins.includes(origin.replace(/\/+$/, ""))) {
         return callback(null, true);
       }
-      callback(new Error("Origem não permitida por CORS"));
+      const error = new Error("Origem não permitida por CORS") as Error & { status?: number };
+      error.status = 403;
+      callback(error);
     },
     credentials: true,
   }),
@@ -52,7 +54,8 @@ app.use(compression());
 // ── Rate limiting (global) ─────────────────────────────────────────────────
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
-  max: 300,
+  max: 1500,
+  skip: (req) => req.path === "/api/health" || req.path === "/api/healthz" || req.path === "/api/service/display/events",
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Muitas requisições. Tente novamente em alguns minutos." },
@@ -85,5 +88,15 @@ app.use(express.json({ limit: "4mb" }));
 app.use(express.urlencoded({ extended: true, limit: "2mb" }));
 
 app.use("/api", router);
+
+app.use(
+  (error: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
+    const status = error.status && error.status >= 400 && error.status < 600 ? error.status : 500;
+    if (status === 500) logger.error({ err: error }, "Erro não tratado na API");
+    res.status(status).json({
+      error: status === 500 ? "Erro interno do servidor" : error.message,
+    });
+  },
+);
 
 export default app;

@@ -45,6 +45,15 @@ export async function requireAuth(
     return;
   }
 
+  if (
+    user.role === "attendant" &&
+    !req.path.startsWith("/service/") &&
+    !allowedWhileChangingPassword.includes(req.path)
+  ) {
+    res.status(403).json({ error: "O perfil atendente possui acesso somente à Central de Atendimento" });
+    return;
+  }
+
   next();
 }
 

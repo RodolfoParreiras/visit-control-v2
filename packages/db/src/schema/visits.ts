@@ -34,7 +34,7 @@ export const visitsTable = pgTable("visits", {
   // Snapshot of visitor data at the moment the visit was registered.
   // These are immutable — they never change even if the visitor profile is later edited.
   visitorName: text("visitor_name"),
-  visitorCpf: text("visitor_cpf"),
+  visitorCpf: text("visitor_cpf").notNull(),
   visitorPhone: text("visitor_phone"),
   visitorCompany: text("visitor_company"),
   visitorCity: text("visitor_city"),

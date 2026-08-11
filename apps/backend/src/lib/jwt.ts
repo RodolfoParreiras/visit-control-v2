@@ -1,9 +1,9 @@
 import jwt from "jsonwebtoken";
 
 const secret = process.env.SESSION_SECRET;
-if (!secret || secret.length < 16) {
+if (!secret || secret.length < 32) {
   console.error(
-    "FATAL: SESSION_SECRET environment variable is missing or too short (min 16 chars). Refusing to start.",
+    "FATAL: SESSION_SECRET environment variable is missing or too short (min 32 chars). Refusing to start.",
   );
   process.exit(1);
 }
