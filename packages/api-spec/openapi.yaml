@@ -30,8 +30,54 @@ tags:
     description: System configuration
   - name: service
     description: Service center and visitor calling
+  - name: backup
+    description: Administrative database backup
 
 paths:
+  /admin/backup:
+    post:
+      operationId: generateBackup
+      tags: [backup]
+      summary: Generate and download a full database backup
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Compressed PostgreSQL backup
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/gzip:
+              schema:
+                type: string
+                format: binary
+        "401":
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Administrator access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Another backup is already running
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Backup generation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /healthz:
     get:
       operationId: healthCheck
@@ -659,7 +705,7 @@ paths:
     get:
       operationId: getWeeklyChart
       tags: [dashboard]
-      summary: Weekly visit chart data (last 7 days)
+      summary: Weekly visit chart data (current Sunday-to-Saturday week)
       security:
         - bearerAuth: []
       responses:
@@ -676,7 +722,7 @@ paths:
     get:
       operationId: getMonthlyChart
       tags: [dashboard]
-      summary: Monthly visit chart data (last 30 days)
+      summary: Monthly visit chart data (current calendar month)
       security:
         - bearerAuth: []
       responses:
@@ -931,7 +977,14 @@ components:
     # ── User ──────────────────────────────────────────────────────────────
     UserPermissions:
       type: object
-      required: [editVisitorName, editVisitorCpf, editVisitorPhone, editVisitorCompany, editVisitorCity]
+      required:
+        [
+          editVisitorName,
+          editVisitorCpf,
+          editVisitorPhone,
+          editVisitorCompany,
+          editVisitorCity,
+        ]
       properties:
         editVisitorName:
           type: boolean
@@ -946,7 +999,17 @@ components:
 
     User:
       type: object
-      required: [id, name, login, role, status, mustChangePassword, permissions, createdAt]
+      required:
+        [
+          id,
+          name,
+          login,
+          role,
+          status,
+          mustChangePassword,
+          permissions,
+          createdAt,
+        ]
       properties:
         id:
           type: integer
@@ -1030,7 +1093,17 @@ components:
     # ── Sector ────────────────────────────────────────────────────────────
     Sector:
       type: object
-      required: [id, name, abbreviation, secretariat, status, queueEnabled, usesDesks, createdAt]
+      required:
+        [
+          id,
+          name,
+          abbreviation,
+          secretariat,
+          status,
+          queueEnabled,
+          usesDesks,
+          createdAt,
+        ]
       properties:
         id:
           type: integer

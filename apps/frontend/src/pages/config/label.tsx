@@ -9,7 +9,7 @@ import type { LabelConfig as ApiLabelConfig } from '@visit-control/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Tag, Save, Eye, Printer, Palette, LayoutGrid, List,
+  CalendarDays, CircleUserRound, Tag, Save, Eye, Printer, Palette, LayoutGrid, List,
   RotateCcw, Upload, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,9 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { PrintLabel, DEFAULT_LAYOUT, parseLayout } from '@/components/PrintLabel';
 import type { ElementKey, LabelLayout } from '@/components/PrintLabel';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 // ── Printer presets ──────────────────────────────────────────────────────────
 
@@ -128,6 +131,7 @@ const MOCK_VISIT: any = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ConfigLabel() {
+  const { user } = useAuth();
   const { data: config, isLoading } = useGetLabelConfig();
   const updateConfig = useUpdateLabelConfig();
   const queryClient  = useQueryClient();
@@ -275,26 +279,25 @@ export default function ConfigLabel() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-screen-2xl mx-auto w-full space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-              <Tag className="w-8 h-8 text-primary" />
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+              <Tag className="h-8 w-8" />
               Configuração da Etiqueta
             </h1>
-            <p className="text-gray-500 mt-1">
+            <p className="mt-1 text-slate-500">
               Personalize o layout, dimensões e elementos da etiqueta de visitante.
             </p>
           </div>
-          <Button
-            onClick={form.handleSubmit(onSubmit)}
-            disabled={updateConfig.isPending}
-            className="gap-2"
-          >
-            <Save className="w-4 h-4" />
-            Salvar Etiqueta
-          </Button>
+          <div className="flex flex-col items-end">
+            <div className="hidden text-right text-sm text-slate-500 sm:block">
+              <div className="flex items-center justify-end gap-2 font-semibold text-slate-600"><span>Olá, {user?.name}</span><CircleUserRound className="h-5 w-5" /></div>
+              <div className="mt-2 flex items-center justify-end gap-2"><span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span><CalendarDays className="h-5 w-5" /></div>
+            </div>
+            <Button onClick={form.handleSubmit(onSubmit)} disabled={updateConfig.isPending} className="mt-3 h-11 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]"><Save className="h-4 w-4" />Salvar Etiqueta</Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -304,24 +307,24 @@ export default function ConfigLabel() {
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-              <div className="grid grid-cols-1 2xl:grid-cols-[1fr_380px] gap-8 items-start">
+              <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
 
                 {/* ── Left panel: tabs ─────────────────────────────────────── */}
                 <Tabs defaultValue="impressora" className="space-y-4">
-                  <TabsList className="grid grid-cols-4 w-full">
-                    <TabsTrigger value="impressora" className="gap-1.5">
+                  <TabsList className="grid h-auto w-full grid-cols-2 rounded-xl border border-slate-200 bg-white p-0 shadow-sm sm:grid-cols-4">
+                    <TabsTrigger value="impressora" className="gap-1.5 rounded-none border-b-2 border-transparent py-3 text-slate-500 data-[state=active]:border-[#b2d233] data-[state=active]:bg-transparent data-[state=active]:text-[#012c61] data-[state=active]:shadow-none">
                       <Printer className="w-3.5 h-3.5" />
                       Impressora
                     </TabsTrigger>
-                    <TabsTrigger value="aparencia" className="gap-1.5">
+                    <TabsTrigger value="aparencia" className="gap-1.5 rounded-none border-b-2 border-transparent py-3 text-slate-500 data-[state=active]:border-[#b2d233] data-[state=active]:bg-transparent data-[state=active]:text-[#012c61] data-[state=active]:shadow-none">
                       <Palette className="w-3.5 h-3.5" />
                       Aparência
                     </TabsTrigger>
-                    <TabsTrigger value="elementos" className="gap-1.5">
+                    <TabsTrigger value="elementos" className="gap-1.5 rounded-none border-b-2 border-transparent py-3 text-slate-500 data-[state=active]:border-[#b2d233] data-[state=active]:bg-transparent data-[state=active]:text-[#012c61] data-[state=active]:shadow-none">
                       <List className="w-3.5 h-3.5" />
                       Elementos
                     </TabsTrigger>
-                    <TabsTrigger value="editor" className="gap-1.5">
+                    <TabsTrigger value="editor" className="gap-1.5 rounded-none border-b-2 border-transparent py-3 text-slate-500 data-[state=active]:border-[#b2d233] data-[state=active]:bg-transparent data-[state=active]:text-[#012c61] data-[state=active]:shadow-none">
                       <LayoutGrid className="w-3.5 h-3.5" />
                       Editor Visual
                     </TabsTrigger>
@@ -329,9 +332,9 @@ export default function ConfigLabel() {
 
                   {/* ── Tab: Impressora ──────────────────────────────────── */}
                   <TabsContent value="impressora">
-                    <Card>
-                      <CardHeader className="border-b bg-gray-50/50">
-                        <CardTitle className="text-base">Modelo de Impressora e Dimensões</CardTitle>
+                    <Card className="border-slate-200 shadow-sm">
+                      <CardHeader className="border-b border-slate-100">
+                        <CardTitle className="text-base text-[#012c61]">Modelo de impressão e dimensões</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6 space-y-6">
 
@@ -417,9 +420,9 @@ export default function ConfigLabel() {
 
                   {/* ── Tab: Aparência ───────────────────────────────────── */}
                   <TabsContent value="aparencia">
-                    <Card>
-                      <CardHeader className="border-b bg-gray-50/50">
-                        <CardTitle className="text-base">Textos, Fontes e Logo</CardTitle>
+                    <Card className="border-slate-200 shadow-sm">
+                      <CardHeader className="border-b border-slate-100">
+                        <CardTitle className="text-base text-[#012c61]">Textos, Fontes e Logo</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6 space-y-6">
 
@@ -558,9 +561,9 @@ export default function ConfigLabel() {
 
                   {/* ── Tab: Elementos ───────────────────────────────────── */}
                   <TabsContent value="elementos">
-                    <Card>
-                      <CardHeader className="border-b bg-gray-50/50">
-                        <CardTitle className="text-base">Campos Exibidos na Etiqueta</CardTitle>
+                    <Card className="border-slate-200 shadow-sm">
+                      <CardHeader className="border-b border-slate-100">
+                        <CardTitle className="text-base text-[#012c61]">Campos Exibidos na Etiqueta</CardTitle>
                       </CardHeader>
                       <CardContent className="p-6">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -592,10 +595,10 @@ export default function ConfigLabel() {
 
                   {/* ── Tab: Editor Visual ───────────────────────────────── */}
                   <TabsContent value="editor">
-                    <Card>
-                      <CardHeader className="border-b bg-gray-50/50">
+                    <Card className="border-slate-200 shadow-sm">
+                      <CardHeader className="border-b border-slate-100">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">Posicionamento dos Elementos</CardTitle>
+                          <CardTitle className="text-base text-[#012c61]">Posicionamento dos Elementos</CardTitle>
                           <Button
                             type="button"
                             variant="outline"
@@ -664,11 +667,11 @@ export default function ConfigLabel() {
 
                 {/* ── Right panel: live preview ─────────────────────────── */}
                 <div className="sticky top-6 space-y-3">
-                  <Card className="bg-gray-100/60">
-                    <CardHeader className="border-b border-gray-200 py-3">
-                      <CardTitle className="text-sm flex items-center gap-2">
-                        <Eye className="w-4 h-4 text-muted-foreground" />
-                        Prévia em Tempo Real
+                  <Card className="border-slate-200 bg-white shadow-sm">
+                    <CardHeader className="border-b border-slate-100 py-4">
+                      <CardTitle className="flex items-center gap-2 text-sm text-[#012c61]">
+                        <Eye className="h-4 w-4" />
+                        Prévia em tempo real
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="p-6 flex items-center justify-center min-h-[200px] overflow-auto">
@@ -693,7 +696,7 @@ export default function ConfigLabel() {
                   <Button
                     type="submit"
                     disabled={updateConfig.isPending}
-                    className="w-full gap-2"
+                    className="h-11 w-full gap-2 rounded-lg border-0 bg-[#012c61] font-semibold text-white hover:bg-[#01244f]"
                     onClick={form.handleSubmit(onSubmit)}
                   >
                     <Save className="w-4 h-4" />

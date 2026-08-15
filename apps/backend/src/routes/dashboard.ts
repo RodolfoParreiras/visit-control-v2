@@ -5,23 +5,24 @@ import {
   visitorsTable,
   sectorsTable,
 } from "@visit-control/db";
-import { eq, sql, desc, and, gte } from "drizzle-orm";
+import { eq, sql, desc, and, gte, lte } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { GetRecentVisitsQueryParams } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 import { resolveVisitorSnapshot } from "../lib/visitor-snapshot";
+import {
+  formatDashboardDateLabel,
+  getDashboardPeriods,
+} from "../lib/dashboard-periods";
 
 const router: IRouter = Router();
-
-function today() {
-  return new Date().toISOString().split("T")[0];
-}
 
 router.get(
   "/dashboard/stats",
   requireAuth,
   async (_req: Request, res: Response): Promise<void> => {
-    const todayStr = today();
+    const periods = getDashboardPeriods();
+    const todayStr = periods.today;
 
     const [todayTotal] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -43,23 +44,15 @@ router.get(
         ),
       );
 
-    const weekStart = new Date();
-    weekStart.setDate(weekStart.getDate() - 6);
-    const weekStr = weekStart.toISOString().split("T")[0];
-
     const [weekTotal] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(gte(visitsTable.entryDate, weekStr));
-
-    const monthStart = new Date();
-    monthStart.setDate(monthStart.getDate() - 29);
-    const monthStr = monthStart.toISOString().split("T")[0];
+      .where(and(gte(visitsTable.entryDate, periods.weekStart), lte(visitsTable.entryDate, periods.weekEnd)));
 
     const [monthTotal] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(gte(visitsTable.entryDate, monthStr));
+      .where(and(gte(visitsTable.entryDate, periods.monthStart), lte(visitsTable.entryDate, periods.monthEnd)));
 
     res.json({
       todayTotal: todayTotal.count,
@@ -75,7 +68,7 @@ router.get(
   "/dashboard/visits-by-sector",
   requireAuth,
   async (_req: Request, res: Response): Promise<void> => {
-    const todayStr = today();
+    const todayStr = getDashboardPeriods().today;
     const rows = await db
       .select({
         sectorId: visitsTable.sectorId,
@@ -103,11 +96,8 @@ router.get(
   requireAuth,
   async (_req: Request, res: Response): Promise<void> => {
     const points = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("pt-BR", {
+    for (const dateStr of getDashboardPeriods().weekDates) {
+      const label = formatDashboardDateLabel(dateStr, {
         weekday: "short",
         day: "2-digit",
       });
@@ -126,11 +116,8 @@ router.get(
   requireAuth,
   async (_req: Request, res: Response): Promise<void> => {
     const points = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split("T")[0];
-      const label = d.toLocaleDateString("pt-BR", {
+    for (const dateStr of getDashboardPeriods().monthDates) {
+      const label = formatDashboardDateLabel(dateStr, {
         day: "2-digit",
         month: "short",
       });

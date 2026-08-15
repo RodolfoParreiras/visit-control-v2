@@ -529,7 +529,13 @@ export type ListVisitsParams = {
 search?: string;
 sectorId?: number;
 status?: ListVisitsStatus;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
 dateFrom?: string;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
 dateTo?: string;
 userId?: number;
 page?: number;
@@ -550,7 +556,13 @@ limit?: number;
 };
 
 export type GetVisitsReportParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
 dateFrom?: string;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
 dateTo?: string;
 sectorId?: number;
 userId?: number;
@@ -569,7 +581,13 @@ export const GetVisitsReportStatus = {
 export type ListAuditLogsParams = {
 userId?: number;
 action?: string;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
 dateFrom?: string;
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
 dateTo?: string;
 page?: number;
 limit?: number;

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCircle2, Headphones, RefreshCw, Users } from 'lucide-react';
+import { Bell, CalendarDays, CheckCircle2, CircleUserRound, Headphones, RefreshCw, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,11 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { serviceApi } from '@/lib/service-api';
 import { useToast } from '@/hooks/use-toast';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const centralKey = ['service-central'];
 const time = (value: string) => new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
 export default function ServiceCenter() {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deskId, setDeskId] = useState<string>('');
@@ -54,50 +59,56 @@ export default function ServiceCenter() {
   const activeDesks = data.desks.filter((desk) => desk.active);
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2"><Headphones className="h-8 w-8 text-primary" />Central de Atendimento — {data.sector.name}</h1>
-          <p className="text-muted-foreground mt-1">A fila é atualizada automaticamente e segue a ordem de chegada.</p>
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]"><Headphones className="h-8 w-8" />Central de Atendimento — {data.sector.name}</h1>
+            <p className="mt-1 text-slate-500">A fila é atualizada automaticamente e segue a ordem de chegada.</p>
+          </div>
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600"><span>Olá, {user?.name}</span><CircleUserRound className="h-5 w-5" /></div>
+            <div className="mt-2 flex items-center justify-end gap-2"><span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span><CalendarDays className="h-5 w-5" /></div>
+          </div>
         </div>
 
-        <Card>
-          <CardContent className="pt-6 grid gap-5 md:grid-cols-[1fr_auto] md:items-end">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Forma de atendimento</p>
+        <Card className="border-slate-200 p-5 shadow-sm sm:p-6">
+          <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div className="max-w-xl space-y-2">
+              <Label className="text-sm font-semibold text-[#012c61]">Forma de atendimento</Label>
               {data.sector.usesDesks ? (
                 <Select value={deskId} onValueChange={setDeskId}>
-                  <SelectTrigger className="max-w-sm"><SelectValue placeholder="Selecione uma mesa" /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]"><SelectValue placeholder="Selecione uma mesa" /></SelectTrigger>
                   <SelectContent>{activeDesks.map((desk) => <SelectItem key={desk.id} value={String(desk.id)}>{desk.name}</SelectItem>)}</SelectContent>
                 </Select>
-              ) : <div className="font-semibold">Chamada geral do setor <span className="ml-2 text-xs rounded-full bg-green-100 text-green-800 px-2 py-1">Atendimento ativo</span></div>}
+              ) : <div className="flex h-11 items-center font-semibold text-[#012c61]">Chamada geral do setor <span className="ml-2 rounded-full bg-green-100 px-2.5 py-1 text-xs text-green-800">Atendimento ativo</span></div>}
             </div>
-            <div className="flex items-center gap-3 rounded-lg bg-muted px-5 py-3"><Users className="text-primary" /><div><strong className="text-2xl">{data.queue.length}</strong><p className="text-xs text-muted-foreground">pessoas aguardando</p></div></div>
-          </CardContent>
+            <div className="flex min-w-[195px] items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 px-6 py-4 text-[#012c61]"><Users className="h-7 w-7" /><div><strong className="text-3xl leading-none">{data.queue.length}</strong><p className="mt-1 text-sm text-slate-500">pessoas aguardando</p></div></div>
+          </div>
         </Card>
 
         {data.current && (
-          <Card className="border-primary/20">
-            <CardHeader><CardTitle className="text-primary">Atendimento atual</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div><div className="text-2xl font-bold">{data.current.visitorName}</div><p className="text-muted-foreground">Chamado às {time(data.current.calledAt)}{data.current.deskName ? ` — ${data.current.deskName}` : ''}</p></div>
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 px-6 py-5"><CardTitle className="text-lg text-[#012c61]">Atendimento atual</CardTitle></CardHeader>
+            <CardContent className="space-y-5 p-6">
+              <div><div className="break-words text-2xl font-bold text-[#012c61]">{data.current.visitorName}</div><p className="mt-1 text-slate-500">Chamado às {time(data.current.calledAt)}{data.current.deskName ? ` — ${data.current.deskName}` : ''}</p></div>
               <div className="flex flex-wrap gap-3">
-                <Button variant="outline" onClick={() => recall.mutate(data.current!.id)} disabled={recall.isPending}><RefreshCw className="mr-2 h-4 w-4" />Chamar novamente</Button>
-                <Button onClick={() => complete.mutate(data.current!.id)} disabled={complete.isPending}><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar atendimento</Button>
+                <Button variant="outline" className="h-11 rounded-lg border-slate-200 px-5 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => recall.mutate(data.current!.id)} disabled={recall.isPending}><RefreshCw className="mr-2 h-4 w-4" />Chamar novamente</Button>
+                <Button className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]" onClick={() => complete.mutate(data.current!.id)} disabled={complete.isPending}><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar atendimento</Button>
               </div>
             </CardContent>
           </Card>
         )}
 
-        <Card>
-          <CardHeader className="flex-row items-center justify-between gap-4">
-            <CardTitle>Fila de espera</CardTitle>
-            <Button size="lg" onClick={() => callNext.mutate()} disabled={callNext.isPending || !!data.current || data.queue.length === 0 || (data.sector.usesDesks && !deskId)}><Bell className="mr-2 h-5 w-5" />CHAMAR PRÓXIMO</Button>
+        <Card className="overflow-hidden border-slate-200 shadow-sm">
+          <CardHeader className="flex-row items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
+            <div><CardTitle className="text-lg text-[#012c61]">Fila de espera</CardTitle><p className="mt-1 text-sm text-slate-500">{data.queue.length} {data.queue.length === 1 ? 'pessoa aguardando' : 'pessoas aguardando'}</p></div>
+            <Button size="lg" className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f] disabled:bg-slate-400" onClick={() => callNext.mutate()} disabled={callNext.isPending || !!data.current || data.queue.length === 0 || (data.sector.usesDesks && !deskId)}><Bell className="mr-2 h-5 w-5" />CHAMAR PRÓXIMO</Button>
           </CardHeader>
-          <CardContent>
-            <Table><TableHeader><TableRow><TableHead className="w-24">Posição</TableHead><TableHead>Visitante</TableHead><TableHead className="w-32">Entrada</TableHead></TableRow></TableHeader>
-              <TableBody>{data.queue.length ? data.queue.map((person, index) => <TableRow key={person.id}><TableCell className="font-semibold">{index + 1}</TableCell><TableCell>{person.visitorName}</TableCell><TableCell>{time(person.queuedAt)}</TableCell></TableRow>) : <TableRow><TableCell colSpan={3} className="text-center py-10 text-muted-foreground">Nenhum visitante aguardando.</TableCell></TableRow>}</TableBody>
+          <CardContent className="p-0">
+            <Table className="table-fixed"><TableHeader><TableRow className="bg-slate-50 hover:bg-slate-50"><TableHead className="w-[15%]">Posição</TableHead><TableHead className="w-[65%]">Visitante</TableHead><TableHead className="w-[20%]">Entrada</TableHead></TableRow></TableHeader>
+              <TableBody>{data.queue.length ? data.queue.map((person, index) => <TableRow key={person.id} className="hover:bg-slate-50/80"><TableCell className="font-semibold text-[#012c61]">{index + 1}</TableCell><TableCell className="break-words font-medium">{person.visitorName}</TableCell><TableCell className="text-slate-600">{time(person.queuedAt)}</TableCell></TableRow>) : <TableRow><TableCell colSpan={3} className="py-14 text-center text-slate-500"><Users className="mx-auto mb-3 h-9 w-9 text-slate-300" /><span>Nenhum visitante aguardando.</span></TableCell></TableRow>}</TableBody>
             </Table>
-            <p className="mt-4 text-xs text-muted-foreground flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-green-500" />Atualização automática</p>
+            <p className="flex items-center gap-2 border-t border-slate-100 px-6 py-4 text-xs text-slate-500"><span className="h-2 w-2 rounded-full bg-green-500" />Atualização automática</p>
           </CardContent>
         </Card>
       </div>

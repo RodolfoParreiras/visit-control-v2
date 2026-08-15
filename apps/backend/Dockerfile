@@ -22,9 +22,12 @@ WORKDIR /app/apps/backend
 RUN pnpm run build
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
-FROM node:22-alpine AS runtime
+FROM node:22-alpine3.20 AS runtime
 
 WORKDIR /app
+
+# Ferramenta oficial do PostgreSQL usada pelo backup administrativo.
+RUN apk add --no-cache postgresql16-client
 
 # Copia os artefatos compilados e dependências de runtime
 COPY --from=builder /app/apps/backend/dist ./dist

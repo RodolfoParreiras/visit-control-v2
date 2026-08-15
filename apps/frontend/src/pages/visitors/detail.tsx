@@ -10,15 +10,17 @@ import {
 import { useParams, Link } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  User,
+  ArrowLeft,
   Building2,
+  CalendarDays,
+  CircleUserRound,
+  IdCard,
   MapPin,
   Phone,
   Edit,
-  Calendar,
-  Clock,
+  UserRound,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -39,6 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateOnly } from "@/lib/utils";
@@ -167,91 +170,102 @@ export default function VisitorDetail() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                <User className="w-5 h-5" />
-              </div>
-              {visitor.name}
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+              <UserRound className="h-8 w-8" />
+              Perfil do Visitante
             </h1>
-            <p className="text-gray-500 mt-1 ml-13">
-              Visitante desde{" "}
-              {format(new Date(visitor.createdAt), "dd/MM/yyyy")}
-            </p>
+            <p className="mt-1 text-slate-500">Dados cadastrais e histórico de visitas.</p>
           </div>
-          {canEditVisitor && (
-            <Button
-              onClick={handleEditOpen}
-              variant="outline"
-              className="gap-2"
-            >
-              <Edit className="w-4 h-4" /> Editar Perfil
-            </Button>
-          )}
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600">
+              <span>Olá, {user?.name}</span>
+              <CircleUserRound className="h-5 w-5" />
+            </div>
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+              <CalendarDays className="h-5 w-5" />
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <Card className="md:col-span-1 border-t-4 border-t-primary shadow-sm h-fit">
-            <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50">
-              <CardTitle className="text-base">Dados Pessoais</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div>
-                <Label className="text-xs text-muted-foreground">CPF</Label>
-                <div className="font-mono text-sm mt-0.5">
-                  {visitor.cpf || "Não informado"}
+        <Card className="flex flex-col gap-6 border-slate-200 p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="break-words text-2xl font-bold text-[#012c61] md:text-3xl">{visitor.name}</h2>
+            <p className="mt-2 text-slate-500">
+              Visitante desde {format(new Date(visitor.createdAt), "dd/MM/yyyy")}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+            <Link href="/visitors">
+              <Button variant="outline" className="h-11 w-full gap-2 rounded-lg border-[#174f8c]/50 px-5 text-[#012c61] hover:bg-[#174f8c]/10 sm:w-auto">
+                <ArrowLeft className="h-4 w-4" />Voltar para visitantes
+              </Button>
+            </Link>
+            {canEditVisitor && (
+              <Button onClick={handleEditOpen} className="h-11 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
+                <Edit className="h-4 w-4" />Editar Perfil
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <Card className="h-fit overflow-hidden border-slate-200 shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-5">
+              <h2 className="font-semibold text-[#012c61]">Dados do visitante</h2>
+            </div>
+            <div className="divide-y divide-slate-100 px-6">
+              <div className="flex gap-3 py-5">
+                <IdCard className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-500">CPF</p>
+                  <p className="mt-1 break-words font-medium text-slate-800">{visitor.cpf ? maskCpf(visitor.cpf) : "Não informado"}</p>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">
-                  Telefone
-                </Label>
-                <div className="text-sm mt-0.5 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-gray-400" />
-                  {visitor.phone || "Não informado"}
+              <div className="flex gap-3 py-5">
+                <Phone className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-500">Telefone</p>
+                  <p className="mt-1 break-words font-medium text-slate-800">{visitor.phone || "Não informado"}</p>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">
-                  Empresa/Órgão
-                </Label>
-                <div className="text-sm mt-0.5 flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                  {visitor.company || "Não informada"}
+              <div className="flex gap-3 py-5">
+                <Building2 className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-500">Empresa/Órgão</p>
+                  <p className="mt-1 break-words font-medium text-slate-800">{visitor.company || "Não informada"}</p>
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground">Cidade</Label>
-                <div className="text-sm mt-0.5 flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-gray-400" />
-                  {visitor.city || "Não informada"}
+              <div className="flex gap-3 py-5">
+                <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-500">Cidade</p>
+                  <p className="mt-1 break-words font-medium text-slate-800">{visitor.city || "Não informada"}</p>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
 
-          <Card className="md:col-span-3 shadow-sm">
-            <CardHeader className="pb-3 border-b border-gray-100 bg-gray-50/50 flex flex-row items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-muted-foreground" />
-                Histórico de Visitas
-              </CardTitle>
-              <div className="text-sm font-medium bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
-                {visitor.visits?.length || 0} visitas
-              </div>
-            </CardHeader>
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-5">
+              <h2 className="font-semibold text-[#012c61]">Histórico de visitas</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {visitor.visits?.length || 0} {(visitor.visits?.length || 0) === 1 ? "visita" : "visitas"}
+              </p>
+            </div>
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed">
                 <TableHeader>
-                  <TableRow className="bg-gray-50/30">
-                    <TableHead className="w-[100px]">ID</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Setor de Destino</TableHead>
-                    <TableHead>Entrada</TableHead>
-                    <TableHead>Saída</TableHead>
-                    <TableHead>Status</TableHead>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50">
+                    <TableHead className="w-[9%]">ID</TableHead>
+                    <TableHead className="w-[17%]">Data</TableHead>
+                    <TableHead className="w-[27%]">Setor de destino</TableHead>
+                    <TableHead className="w-[15%]">Entrada</TableHead>
+                    <TableHead className="w-[14%]">Saída</TableHead>
+                    <TableHead className="w-[18%]">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -266,28 +280,18 @@ export default function VisitorDetail() {
                     </TableRow>
                   ) : (
                     visitor.visits.map((visit) => (
-                      <TableRow key={visit.id} className="hover:bg-blue-50/50">
-                        <TableCell className="font-mono text-xs text-gray-500">
-                          <Link
-                            href={`/visits/${visit.id}`}
-                            className="hover:underline text-primary"
-                          >
+                      <TableRow key={visit.id} className="hover:bg-slate-50/80">
+                        <TableCell className="text-xs text-slate-500">
+                          <Link href={`/visits/${visit.id}`} className="font-medium text-[#012c61] hover:underline">
                             #{visit.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {formatDateOnly(visit.entryDate)}
-                        </TableCell>
-                        <TableCell className="font-medium text-sm">
+                        <TableCell className="whitespace-nowrap text-sm">{formatDateOnly(visit.entryDate)}</TableCell>
+                        <TableCell className="truncate text-sm font-medium" title={visit.sector?.name || `Setor #${visit.sectorId}`}>
                           {visit.sector?.name || `Setor #${visit.sectorId}`}
                         </TableCell>
-                        <TableCell className="font-mono text-sm flex items-center gap-1.5">
-                          <Clock className="w-3 h-3 text-gray-400" />{" "}
-                          {visit.entryTime}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm text-gray-500">
-                          {visit.exitTime || "-"}
-                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-slate-600">{visit.entryTime}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-slate-600">{visit.exitTime || "-"}</TableCell>
                         <TableCell>
                           <StatusBadge status={visit.status} />
                         </TableCell>

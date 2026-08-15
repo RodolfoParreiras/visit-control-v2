@@ -63,6 +63,60 @@ function isValidDate(value: string): boolean {
   );
 }
 
+async function getOngoingVisit(visitorId: number) {
+  const [visit] = await db
+    .select({
+      id: visitsTable.id,
+      entryDate: visitsTable.entryDate,
+      entryTime: visitsTable.entryTime,
+      sectorId: visitsTable.sectorId,
+      sectorName: sectorsTable.name,
+    })
+    .from(visitsTable)
+    .leftJoin(sectorsTable, eq(visitsTable.sectorId, sectorsTable.id))
+    .where(
+      and(
+        eq(visitsTable.visitorId, visitorId),
+        eq(visitsTable.status, "ongoing"),
+      ),
+    )
+    .limit(1);
+
+  return visit ?? null;
+}
+
+function sendOngoingVisitConflict(
+  res: Response,
+  visit: NonNullable<Awaited<ReturnType<typeof getOngoingVisit>>>,
+) {
+  res.status(409).json({
+    error: "Este visitante já possui uma visita em andamento.",
+    code: "VISITOR_HAS_ONGOING_VISIT",
+    visitId: visit.id,
+    visit,
+  });
+}
+
+function isOngoingVisitConstraintError(error: unknown): boolean {
+  let current = error;
+  for (let depth = 0; depth < 3; depth += 1) {
+    if (!current || typeof current !== "object") return false;
+    const databaseError = current as {
+      code?: string;
+      constraint?: string;
+      cause?: unknown;
+    };
+    if (
+      databaseError.code === "23505" &&
+      databaseError.constraint === "visits_one_ongoing_per_visitor"
+    ) {
+      return true;
+    }
+    current = databaseError.cause;
+  }
+  return false;
+}
+
 async function getFullVisit(id: number) {
   const rows = await db
     .select({
@@ -404,6 +458,12 @@ router.post(
       }
       finalVisitorId = existing.id;
 
+      const ongoingVisit = await getOngoingVisit(finalVisitorId);
+      if (ongoingVisit) {
+        sendOngoingVisitConflict(res, ongoingVisit);
+        return;
+      }
+
       if (updateVisitorData) {
         if (visitorCpfProvided && !visitorCpf) {
           res.status(400).json({ error: "CPF é obrigatório." });
@@ -430,7 +490,9 @@ router.post(
           .update(visitorsTable)
           .set({
             name: visitorName ? String(visitorName) : existing.name,
-            cpf: visitorCpfProvided ? (visitorCpf ?? existing.cpf) : existing.cpf,
+            cpf: visitorCpfProvided
+              ? (visitorCpf ?? existing.cpf)
+              : existing.cpf,
             phone:
               visitorPhone !== undefined
                 ? visitorPhone
@@ -505,26 +567,38 @@ router.post(
       });
     }
 
-    const [visit] = await db
-      .insert(visitsTable)
-      .values({
-        visitorId: finalVisitorId,
-        // Immutable snapshot — preserves visitor data as it was at registration time
-        visitorName: visitorSnapshot.name,
-        visitorCpf: visitorSnapshot.cpf,
-        visitorPhone: visitorSnapshot.phone,
-        visitorCompany: visitorSnapshot.company,
-        visitorCity: visitorSnapshot.city,
-        sectorId: parseInt(String(sectorId), 10),
-        responsible: responsible ? String(responsible) : null,
-        reason: reason ? String(reason) : null,
-        notes: notes ? String(notes) : null,
-        status: "ongoing",
-        entryDate: nowDate(),
-        entryTime: nowTime(),
-        entryUserId: caller.id,
-      })
-      .returning();
+    let visit: typeof visitsTable.$inferSelect;
+    try {
+      [visit] = await db
+        .insert(visitsTable)
+        .values({
+          visitorId: finalVisitorId,
+          // Immutable snapshot — preserves visitor data as it was at registration time
+          visitorName: visitorSnapshot.name,
+          visitorCpf: visitorSnapshot.cpf,
+          visitorPhone: visitorSnapshot.phone,
+          visitorCompany: visitorSnapshot.company,
+          visitorCity: visitorSnapshot.city,
+          sectorId: parseInt(String(sectorId), 10),
+          responsible: responsible ? String(responsible) : null,
+          reason: reason ? String(reason) : null,
+          notes: notes ? String(notes) : null,
+          status: "ongoing",
+          entryDate: nowDate(),
+          entryTime: nowTime(),
+          entryUserId: caller.id,
+        })
+        .returning();
+    } catch (error) {
+      if (isOngoingVisitConstraintError(error)) {
+        const ongoingVisit = await getOngoingVisit(finalVisitorId);
+        if (ongoingVisit) {
+          sendOngoingVisitConflict(res, ongoingVisit);
+          return;
+        }
+      }
+      throw error;
+    }
 
     const [destinationSector] = await db
       .select({ queueEnabled: sectorsTable.queueEnabled })

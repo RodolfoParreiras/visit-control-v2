@@ -11,7 +11,7 @@ import {
 } from '@visit-control/api-client';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Plus, Edit, Trash2, MonitorCog } from 'lucide-react';
+import { Building2, CalendarDays, CircleUserRound, Plus, Edit, Trash2, MonitorCog, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,6 +24,11 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Switch } from '@/components/ui/switch';
 import { serviceApi } from '@/lib/service-api';
+import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { useAuth } from '@/contexts/AuthContext';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const sectorSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
@@ -37,6 +42,7 @@ const sectorSchema = z.object({
 type SectorFormValues = z.infer<typeof sectorSchema>;
 
 export default function Sectors() {
+  const { user } = useAuth();
   const { data: sectors, isLoading } = useListSectors();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -133,40 +139,46 @@ export default function Sectors() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-              <Building2 className="w-8 h-8 text-primary" />
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+              <Building2 className="h-8 w-8" />
               Setores
             </h1>
-            <p className="text-gray-500 mt-1">Gerencie os setores e departamentos do município.</p>
+            <p className="mt-1 text-slate-500">Gerencie os setores e departamentos do município.</p>
           </div>
-          <Button onClick={openNewDialog} className="gap-2">
-            <Plus className="w-4 h-4" /> Novo Setor
-          </Button>
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600"><span>Olá, {user?.name}</span><CircleUserRound className="h-5 w-5" /></div>
+            <div className="mt-2 flex items-center justify-end gap-2"><span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span><CalendarDays className="h-5 w-5" /></div>
+          </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-4 border-b border-gray-200 bg-gray-50/50">
-            <Input 
-              placeholder="Buscar setor ou sigla..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="max-w-sm bg-white"
-            />
+        <Card className="border-slate-200 p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="w-full max-w-2xl space-y-2">
+              <Label htmlFor="sector-search" className="text-sm font-semibold text-[#012c61]">Pesquisar</Label>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input id="sector-search" placeholder="Buscar setor ou sigla" value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 rounded-lg border-slate-300 bg-white pl-10 focus-visible:ring-[#174f8c]" />
+              </div>
+            </div>
+            <Button onClick={openNewDialog} className="h-11 shrink-0 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
+              <Plus className="h-4 w-4" />Novo Setor
+            </Button>
           </div>
-          
-          <Table>
+        </Card>
+
+        <Card className="overflow-hidden border-slate-200 shadow-sm">
+          <div className="border-b border-slate-100 px-6 py-5">
+            <h2 className="font-semibold text-[#012c61]">Setores cadastrados</h2>
+            <p className="mt-1 text-sm text-slate-500">{filteredSectors?.length || 0} {(filteredSectors?.length || 0) === 1 ? 'setor' : 'setores'}</p>
+          </div>
+          <div className="overflow-x-auto">
+          <Table className="table-fixed">
             <TableHeader>
-              <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="w-[100px]">ID</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead>Sigla</TableHead>
-                <TableHead>Secretaria</TableHead>
-                <TableHead>Atendimento</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+              <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableHead className="w-[7%]">ID</TableHead><TableHead className="w-[13%]">Nome</TableHead><TableHead className="w-[9%]">Sigla</TableHead><TableHead className="w-[27%]">Secretaria</TableHead><TableHead className="w-[14%]">Atendimento</TableHead><TableHead className="w-[10%]">Status</TableHead><TableHead className="w-[20%] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -180,20 +192,20 @@ export default function Sectors() {
                 </TableRow>
               ) : (
                 filteredSectors?.map((sector) => (
-                  <TableRow key={sector.id}>
-                    <TableCell className="font-mono text-xs text-gray-500">{sector.id}</TableCell>
-                    <TableCell className="font-medium">{sector.name}</TableCell>
+                  <TableRow key={sector.id} className="hover:bg-slate-50/80">
+                    <TableCell className="text-xs text-slate-500">#{sector.id}</TableCell>
+                    <TableCell className="truncate font-medium" title={sector.name}>{sector.name}</TableCell>
                     <TableCell>{sector.abbreviation}</TableCell>
-                    <TableCell className="text-gray-500 text-sm">{sector.secretariat}</TableCell>
+                    <TableCell className="truncate text-sm text-slate-600" title={sector.secretariat}>{sector.secretariat}</TableCell>
                     <TableCell>{sector.queueEnabled ? <span className="text-xs font-medium rounded-full bg-blue-100 text-blue-800 px-2.5 py-1">{sector.usesDesks ? 'Com mesas' : 'Chamada geral'}</span> : <span className="text-xs text-gray-400">Desativado</span>}</TableCell>
                     <TableCell><StatusBadge active={sector.status} /></TableCell>
-                    <TableCell className="text-right space-x-2">
-                      {sector.queueEnabled && sector.usesDesks && <Button variant="ghost" size="icon" title="Gerenciar mesas" onClick={() => setDeskSector(sector)}><MonitorCog className="w-4 h-4 text-slate-700" /></Button>}
-                      <Button variant="ghost" size="icon" onClick={() => openEditDialog(sector)}>
-                        <Edit className="w-4 h-4 text-blue-600" />
+                    <TableCell className="whitespace-nowrap text-right space-x-1">
+                      {sector.queueEnabled && sector.usesDesks && <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => setDeskSector(sector)}><MonitorCog className="h-4 w-4" />Mesas</Button>}
+                      <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => openEditDialog(sector)}>
+                        <Edit className="h-4 w-4" />Editar
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(sector.id)}>
-                        <Trash2 className="w-4 h-4 text-red-600" />
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Excluir setor" onClick={() => handleDelete(sector.id)}>
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -201,7 +213,8 @@ export default function Sectors() {
               )}
             </TableBody>
           </Table>
-        </div>
+          </div>
+        </Card>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

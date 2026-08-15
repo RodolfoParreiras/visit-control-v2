@@ -4,10 +4,9 @@ import {
   useListVisits, 
   useListSectors, 
   useCheckoutVisit, 
-  useCancelVisit,
   getListVisitsQueryKey
 } from '@visit-control/api-client';
-import { ClipboardList, Search, LogOut as CheckoutIcon, Ban, Eye } from 'lucide-react';
+import { CalendarDays, CircleUserRound, ClipboardList, Eye, LogOut as CheckoutIcon, Search, UserPlus } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -18,9 +17,10 @@ import { Link } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { formatDateOnly } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 function getTodayInSaoPaulo() {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -37,7 +37,6 @@ function getTodayInSaoPaulo() {
 
 export default function VisitsList() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -48,12 +47,7 @@ export default function VisitsList() {
   const [dateFrom, setDateFrom] = useState(getTodayInSaoPaulo);
   const [dateTo, setDateTo] = useState(getTodayInSaoPaulo);
 
-  const [cancelModalOpen, setCancelModalOpen] = useState(false);
-  const [cancelTarget, setCancelTarget] = useState<number | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
-
   const checkoutVisit = useCheckoutVisit();
-  const cancelVisit = useCancelVisit();
 
   const { data: sectors } = useListSectors();
   const { data: response, isLoading, isError } = useListVisits({
@@ -105,89 +99,113 @@ export default function VisitsList() {
     }
   };
 
-  const handleCancelSubmit = () => {
-    if (cancelTarget && cancelReason) {
-      cancelVisit.mutate({ id: cancelTarget, data: { reason: cancelReason } }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListVisitsQueryKey() });
-          setCancelModalOpen(false);
-          toast({ title: 'Visita cancelada' });
-        },
-        onError: () => toast({ variant: 'destructive', title: 'Erro ao cancelar visita' })
-      });
-    }
-  };
-
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <ClipboardList className="w-8 h-8 text-primary" />
-            Visitas
-          </h1>
-          <p className="text-gray-500 mt-1">Acompanhamento e histórico de entradas e saídas.</p>
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+              <ClipboardList className="h-8 w-8" />
+              Visitas
+            </h1>
+            <p className="mt-1 text-slate-500">Acompanhamento e histórico de entradas e saídas.</p>
+          </div>
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600">
+              <span>Olá, {user?.name}</span>
+              <CircleUserRound className="h-5 w-5" />
+            </div>
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+              <CalendarDays className="h-5 w-5" />
+            </div>
+          </div>
         </div>
 
-        <Card className="overflow-hidden">
-          <div className="p-4 border-b border-gray-200 bg-gray-50/50 space-y-4">
-            <div className="flex gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input 
-                  placeholder="Buscar por visitante, CPF..." 
+        <Card className="border-slate-200 p-5 shadow-sm sm:p-6">
+          <div className="grid items-end gap-4 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.6fr)_170px_170px_minmax(470px,2fr)] xl:gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="visit-search" className="text-sm font-semibold text-[#012c61]">Pesquisar</Label>
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="visit-search"
+                  placeholder="Buscar visitante"
                   value={search}
                   onChange={(e) => { setSearch(e.target.value); resetPage(); }}
-                  className="pl-9 bg-white"
+                  className="h-11 rounded-lg border-slate-300 bg-white pl-10 focus-visible:ring-[#174f8c]"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-[#012c61]">Status</Label>
               <Select value={status} onValueChange={(value) => { setStatus(value); resetPage(); }}>
-                <SelectTrigger className="w-[180px] bg-white">
+                <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos os Status</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="ongoing">Em andamento</SelectItem>
                   <SelectItem value="finished">Finalizado</SelectItem>
                   <SelectItem value="cancelled">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="flex flex-wrap gap-4">
-              <div className="w-[200px]">
-                <Select value={sectorId} onValueChange={(value) => { setSectorId(value); resetPage(); }}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Setor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os Setores</SelectItem>
-                    {sectors?.map(s => (
-                      <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input type="date" value={dateFrom} max={dateTo} onChange={e => handleDateFromChange(e.target.value)} className="w-[150px] bg-white text-sm" />
-                <span className="text-gray-400">até</span>
-                <Input type="date" value={dateTo} min={dateFrom} onChange={e => handleDateToChange(e.target.value)} className="w-[150px] bg-white text-sm" />
-                <Button type="button" variant="outline" size="sm" onClick={setTodayFilter}>Hoje</Button>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-[#012c61]">Setor</Label>
+              <Select value={sectorId} onValueChange={(value) => { setSectorId(value); resetPage(); }}>
+                <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]">
+                  <SelectValue placeholder="Setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {sectors?.map(s => (
+                    <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 md:col-span-2 xl:col-span-1">
+              <Label className="text-sm font-semibold text-[#012c61]">Período</Label>
+              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
+                <Input type="date" value={dateFrom} max={dateTo} onChange={e => handleDateFromChange(e.target.value)} className="h-11 min-w-[145px] flex-1 rounded-lg border-slate-300 bg-white text-sm focus-visible:ring-[#174f8c] xl:min-w-0" />
+                <span className="shrink-0 text-sm text-slate-400">até</span>
+                <Input type="date" value={dateTo} min={dateFrom} onChange={e => handleDateToChange(e.target.value)} className="h-11 min-w-[145px] flex-1 rounded-lg border-slate-300 bg-white text-sm focus-visible:ring-[#174f8c] xl:min-w-0" />
+                <Button type="button" variant="outline" onClick={setTodayFilter} className="h-11 shrink-0 rounded-lg border-[#174f8c]/50 px-3 text-[#012c61] hover:bg-[#174f8c]/10">
+                  <CalendarDays className="mr-2 h-4 w-4" />Hoje
+                </Button>
               </div>
             </div>
+
           </div>
-          
+        </Card>
+
+        <Card className="overflow-hidden border-slate-200 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+            <div>
+              <h2 className="font-semibold text-[#012c61]">Registros encontrados</h2>
+              <p className="mt-1 text-sm text-slate-500">{total} {total === 1 ? 'visita' : 'visitas'}</p>
+            </div>
+            <Link href="/visits/new">
+              <Button className="h-11 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
+                <UserPlus className="h-4 w-4" />Nova Visita
+              </Button>
+            </Link>
+          </div>
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="w-[80px]">ID</TableHead>
-                  <TableHead>Visitante</TableHead>
-                  <TableHead>Setor</TableHead>
-                  <TableHead>Data/Hora Entrada</TableHead>
-                  <TableHead>Saída</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableHead className="w-[5%]">ID</TableHead>
+                  <TableHead className="w-[21%]">Visitante</TableHead>
+                  <TableHead className="w-[12%]">Setor</TableHead>
+                  <TableHead className="w-[17%]">Entrada</TableHead>
+                  <TableHead className="w-[11%]">Saída</TableHead>
+                  <TableHead className="w-[13%]">Status</TableHead>
+                  <TableHead className="w-[21%] text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -205,33 +223,28 @@ export default function VisitsList() {
                   </TableRow>
                 ) : (
                   visits.map((visit) => (
-                    <TableRow key={visit.id} className="hover:bg-blue-50/50">
+                    <TableRow key={visit.id} className="hover:bg-slate-50/80">
                       <TableCell className="font-mono text-xs text-gray-500">#{visit.id}</TableCell>
-                      <TableCell className="font-medium">{visit.visitor?.name}</TableCell>
-                      <TableCell className="text-sm">{visit.sector?.name}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">
-                        {formatDateOnly(visit.entryDate)} <span className="font-mono text-xs ml-1 text-gray-500">{visit.entryTime}</span>
+                      <TableCell className="truncate font-medium" title={visit.visitor?.name}>{visit.visitor?.name}</TableCell>
+                      <TableCell className="truncate text-sm" title={visit.sector?.name}>{visit.sector?.name}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm text-slate-600">
+                        {formatDateOnly(visit.entryDate)} <span className="ml-1">{visit.entryTime}</span>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-gray-500 whitespace-nowrap">
+                      <TableCell className="whitespace-nowrap text-sm text-slate-600">
                         {visit.exitTime ? `${formatDateOnly(visit.exitDate)} ${visit.exitTime}` : '-'}
                       </TableCell>
                       <TableCell><StatusBadge status={visit.status} /></TableCell>
                       <TableCell className="text-right whitespace-nowrap space-x-1">
                         {visit.status === 'ongoing' && (
-                          <Button variant="outline" size="sm" className="text-orange-600 border-orange-200 hover:bg-orange-50 h-8 px-2" onClick={() => handleCheckout(visit.id)} disabled={checkoutVisit.isPending}>
-                            <CheckoutIcon className="w-3.5 h-3.5 mr-1" /> Saída
+                          <Button variant="outline" size="sm" className="h-9 border-slate-200 px-3 text-[#012c61] hover:border-transparent hover:bg-red-600 hover:text-white" onClick={() => handleCheckout(visit.id)} disabled={checkoutVisit.isPending}>
+                            <CheckoutIcon className="mr-1.5 h-3.5 w-3.5" />Saída
                           </Button>
                         )}
                         <Link href={`/visits/${visit.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 px-2" title="Ver Detalhes">
-                            <Eye className="w-4 h-4 text-blue-600" />
+                          <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" title="Ver Detalhes">
+                            <Eye className="h-4 w-4" />Detalhes
                           </Button>
                         </Link>
-                        {isAdmin && visit.status === 'ongoing' && (
-                          <Button variant="ghost" size="sm" className="h-8 px-2" title="Cancelar Visita" onClick={() => { setCancelTarget(visit.id); setCancelReason(''); setCancelModalOpen(true); }}>
-                            <Ban className="w-4 h-4 text-red-600" />
-                          </Button>
-                        )}
                       </TableCell>
                     </TableRow>
                   ))
@@ -252,26 +265,6 @@ export default function VisitsList() {
         </Card>
       </div>
 
-      <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="text-red-600 flex items-center gap-2">
-              <Ban className="w-5 h-5" /> Cancelar Visita
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <p className="text-sm text-gray-600">Esta ação irá invalidar o registro de visita #{cancelTarget}. Por favor, informe o motivo do cancelamento.</p>
-            <div className="space-y-2">
-              <Label>Motivo do Cancelamento</Label>
-              <Input value={cancelReason} onChange={e => setCancelReason(e.target.value)} placeholder="Ex: Registro duplicado, visitante não compareceu..." />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelModalOpen(false)}>Desistir</Button>
-            <Button variant="destructive" onClick={handleCancelSubmit} disabled={!cancelReason || cancelVisit.isPending}>Confirmar Cancelamento</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AppLayout>
   );
 }

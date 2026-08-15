@@ -5,19 +5,22 @@ import {
   useListSectors,
   useListUsers
 } from '@visit-control/api-client';
-import { FileBarChart, Download, FileText } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { CalendarDays, CircleUserRound, FileBarChart, Download, FileText } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateOnly } from '@/lib/utils';
 import { utils, writeFile } from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Label } from '@/components/ui/label';
+import { maskCpf } from '@/lib/cpf';
 
 export default function Reports() {
   const { user } = useAuth();
@@ -78,7 +81,7 @@ export default function Reports() {
     const doc = new jsPDF('landscape');
     
     doc.setFontSize(16);
-    doc.text('Relatório de Visitas - Prefeitura Municipal', 14, 15);
+    doc.text('Relatório de Visitas - Prefeitura Municipal de Paraíba do Sul', 14, 15);
     
     doc.setFontSize(10);
     doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, 14, 22);
@@ -109,30 +112,41 @@ export default function Reports() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-7xl mx-auto w-full space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <FileBarChart className="w-8 h-8 text-primary" />
-            Relatórios
-          </h1>
-          <p className="text-gray-500 mt-1">Extração de dados e auditoria de fluxo de pessoas.</p>
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+              <FileBarChart className="h-8 w-8" />
+              Relatórios
+            </h1>
+            <p className="mt-1 text-slate-500">Extração de dados e auditoria de fluxo de pessoas.</p>
+          </div>
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600">
+              <span>Olá, {user?.name}</span>
+              <CircleUserRound className="h-5 w-5" />
+            </div>
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+              <CalendarDays className="h-5 w-5" />
+            </div>
+          </div>
         </div>
 
-        <Card>
-          <CardContent className="p-4 bg-gray-50/50 border-b">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Data Inicial</label>
-                <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="bg-white" />
+        <Card className="border-slate-200 p-5 shadow-sm sm:p-6">
+          <div className={`grid grid-cols-1 items-end gap-4 md:grid-cols-2 ${user?.role === 'admin' ? 'xl:grid-cols-5' : 'xl:grid-cols-4'}`}>
+              <div className="space-y-2">
+                <Label htmlFor="report-date-from" className="text-sm font-semibold text-[#012c61]">Data Inicial</Label>
+                <Input id="report-date-from" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-11 rounded-lg border-slate-300 bg-white focus-visible:ring-[#174f8c]" />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Data Final</label>
-                <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="bg-white" />
+              <div className="space-y-2">
+                <Label htmlFor="report-date-to" className="text-sm font-semibold text-[#012c61]">Data Final</Label>
+                <Input id="report-date-to" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-11 rounded-lg border-slate-300 bg-white focus-visible:ring-[#174f8c]" />
               </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Setor</label>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-[#012c61]">Setor</Label>
                 <Select value={sectorId} onValueChange={setSectorId}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os Setores</SelectItem>
                     {sectors?.map(s => <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>)}
@@ -140,10 +154,10 @@ export default function Reports() {
                 </Select>
               </div>
               {user?.role === 'admin' && (
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 mb-1 block">Recepcionista (Entrada)</label>
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold text-[#012c61]">Recepcionista (Entrada)</Label>
                   <Select value={userId} onValueChange={setUserId}>
-                    <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos os Usuários</SelectItem>
                       {users?.map(u => <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>)}
@@ -151,10 +165,10 @@ export default function Reports() {
                   </Select>
                 </div>
               )}
-              <div>
-                <label className="text-xs font-semibold text-gray-500 mb-1 block">Status</label>
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold text-[#012c61]">Status</Label>
                 <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os Status</SelectItem>
                     <SelectItem value="ongoing">Em andamento</SelectItem>
@@ -163,58 +177,60 @@ export default function Reports() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            
-            <div className="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 pt-4 border-t border-gray-200">
-              <div className="text-sm font-medium text-gray-700 bg-white px-3 py-1.5 rounded-md border shadow-sm">
-                Total de Registros Encontrados: <span className="text-primary font-bold">{report?.total || 0}</span>
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-semibold text-[#012c61]">Registros encontrados</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {report?.total || 0} {(report?.total || 0) === 1 ? 'registro' : 'registros'}
+                </p>
               </div>
               <div className="flex gap-3 w-full sm:w-auto">
-                <Button variant="outline" onClick={handleExportPDF} disabled={!visits.length} className="flex-1 sm:flex-none gap-2 bg-white">
-                  <FileText className="w-4 h-4 text-red-600" /> Exportar PDF
+                <Button variant="outline" onClick={handleExportPDF} disabled={!visits.length} className="h-11 flex-1 gap-2 rounded-lg border-red-400 bg-white px-5 text-slate-900 hover:bg-red-50 hover:text-red-700 sm:flex-none">
+                  <FileText className="h-4 w-4 text-red-600" /> Exportar PDF
                 </Button>
-                <Button variant="outline" onClick={handleExportExcel} disabled={!visits.length} className="flex-1 sm:flex-none gap-2 bg-white border-green-200 hover:bg-green-50 hover:text-green-700">
-                  <Download className="w-4 h-4 text-green-600" /> Exportar Excel
+                <Button variant="outline" onClick={handleExportExcel} disabled={!visits.length} className="h-11 flex-1 gap-2 rounded-lg border-green-500 bg-white px-5 text-green-700 hover:bg-green-50 hover:text-green-800 sm:flex-none">
+                  <Download className="h-4 w-4" /> Exportar Excel
                 </Button>
               </div>
             </div>
-          </CardContent>
 
-          <div className="max-h-[500px] overflow-y-auto">
-            <Table>
-              <TableHeader className="sticky top-0 bg-white shadow-sm z-10">
-                <TableRow>
-                  <TableHead className="w-[80px]">ID</TableHead>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Visitante</TableHead>
-                  <TableHead>Setor</TableHead>
-                  <TableHead>Horário</TableHead>
-                  <TableHead>Status</TableHead>
+          <div className="max-h-[500px] overflow-auto">
+            <Table className="table-fixed">
+              <TableHeader className="sticky top-0 z-10 bg-white shadow-sm">
+                <TableRow className="bg-slate-50 hover:bg-slate-50">
+                  <TableHead className="w-[7%]">ID</TableHead>
+                  <TableHead className="w-[13%]">Data</TableHead>
+                  <TableHead className="w-[25%]">Visitante</TableHead>
+                  <TableHead className="w-[15%]">CPF</TableHead>
+                  <TableHead className="w-[13%]">Setor</TableHead>
+                  <TableHead className="w-[10%]">Entrada</TableHead>
+                  <TableHead className="w-[9%]">Saída</TableHead>
+                  <TableHead className="w-[13%]">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-gray-500">Gerando relatório...</TableCell>
+                    <TableCell colSpan={8} className="py-12 text-center text-gray-500">Gerando relatório...</TableCell>
                   </TableRow>
                 ) : visits.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 text-gray-500">Nenhum dado encontrado para os filtros selecionados.</TableCell>
+                    <TableCell colSpan={8} className="py-12 text-center text-gray-500">Nenhum dado encontrado para os filtros selecionados.</TableCell>
                   </TableRow>
                 ) : (
                   visits.map((visit) => (
-                    <TableRow key={visit.id} className="hover:bg-gray-50">
+                    <TableRow key={visit.id} className="hover:bg-slate-50/80">
                       <TableCell className="font-mono text-xs text-gray-500">#{visit.id}</TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">{formatDateOnly(visit.entryDate)}</TableCell>
-                      <TableCell>
-                        <div className="font-medium text-sm">{visit.visitor?.name}</div>
-                        {visit.visitor?.cpf && <div className="text-xs text-gray-500 font-mono">{visit.visitor.cpf}</div>}
-                      </TableCell>
-                      <TableCell className="text-sm">{visit.sector?.name}</TableCell>
-                      <TableCell className="font-mono text-xs text-gray-500 whitespace-nowrap">
-                        In: {visit.entryTime} <br />
-                        Out: {visit.exitTime || '-'}
-                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{formatDateOnly(visit.entryDate)}</TableCell>
+                      <TableCell className="truncate font-medium" title={visit.visitor?.name}>{visit.visitor?.name}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{visit.visitor?.cpf ? maskCpf(visit.visitor.cpf) : '-'}</TableCell>
+                      <TableCell className="truncate text-sm" title={visit.sector?.name}>{visit.sector?.name}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{visit.entryTime}</TableCell>
+                      <TableCell className="whitespace-nowrap text-sm">{visit.exitTime || '-'}</TableCell>
                       <TableCell><StatusBadge status={visit.status} /></TableCell>
                     </TableRow>
                   ))

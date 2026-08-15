@@ -153,13 +153,9 @@ export default function Login() {
 
               <Button
                 type="submit"
-                className="group relative mx-auto flex h-10 w-full max-w-xs overflow-hidden border-0 bg-[#012c61] text-sm font-semibold text-white shadow-lg shadow-[#012c61]/20 hover:bg-[#01244f]"
+                className="relative h-10 w-full overflow-hidden border-0 bg-[#012c61] text-sm font-semibold text-white shadow-lg shadow-[#012c61]/20 hover:bg-[#01244f]"
                 disabled={loginMutation.isPending}
               >
-                <span
-                  className="absolute inset-y-0 left-0 w-1.5 bg-[#b2d233] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                  aria-hidden="true"
-                />
                 {loginMutation.isPending ? (
                   <><Loader2 className="mr-2 h-5 w-5 animate-spin" />Autenticando...</>
                 ) : 'Entrar'}

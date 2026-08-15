@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   useCreateVisit,
   useListSectors,
@@ -8,6 +9,8 @@ import {
   useSearchVisitors,
   useGetVisitor,
   useGetLabelConfig,
+  getGetVisitorQueryKey,
+  getListVisitsQueryKey,
   Visit,
 } from "@visit-control/api-client";
 import { maskCpf } from "@/lib/cpf";
@@ -18,7 +21,10 @@ import {
   AlertCircle,
   Printer,
   CheckCircle2,
-  X,
+  CalendarDays,
+  CircleUserRound,
+  Pencil,
+  ArrowLeft,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -44,9 +50,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PrintLabel } from "@/components/PrintLabel";
 import { printVisitLabel } from "@/lib/print-label";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function VisitNew() {
+  const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const preselectedId = new URLSearchParams(search).get("visitorId");
@@ -55,6 +66,9 @@ export default function VisitNew() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedVisitor, setSelectedVisitor] = useState<any>(null);
   const [createdVisit, setCreatedVisit] = useState<Visit | null>(null);
+  const [conflictingVisitId, setConflictingVisitId] = useState<number | null>(
+    null,
+  );
   const sectorRef = useRef<HTMLButtonElement>(null);
 
   const { data: fieldConfig, isLoading: configLoading } = useGetFieldConfig();
@@ -90,6 +104,17 @@ export default function VisitNew() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { query: { enabled: debouncedSearch.length >= 2 } } as any,
   );
+
+  const { data: selectedVisitorDetails, isLoading: checkingOngoingVisit } =
+    useGetVisitor(
+      Number(selectedVisitor?.id ?? 0),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { query: { enabled: !!selectedVisitor?.id } } as any,
+    );
+  const ongoingVisit = (selectedVisitorDetails as any)?.visits?.find(
+    (visit: any) => visit.status === "ongoing",
+  );
+  const ongoingVisitId = ongoingVisit?.id ?? conflictingVisitId;
 
   // Visit-only schema — visitor data is separate
   const createSchema = () => {
@@ -127,6 +152,7 @@ export default function VisitNew() {
 
   const selectVisitor = (visitor: any) => {
     setSelectedVisitor(visitor);
+    setConflictingVisitId(null);
     setSearchTerm("");
   };
 
@@ -134,6 +160,7 @@ export default function VisitNew() {
     setSelectedVisitor(null);
     setSearchTerm("");
     setCreatedVisit(null);
+    setConflictingVisitId(null);
     form.reset({ sectorId: "", responsible: "", reason: "", notes: "" });
     setLocation("/visits/new");
   };
@@ -151,6 +178,16 @@ export default function VisitNew() {
   };
 
   const onSubmit = (data: any) => {
+    if (ongoingVisitId) {
+      toast({
+        variant: "destructive",
+        title: "Visita já em andamento",
+        description:
+          "Finalize ou cancele a visita atual antes de registrar uma nova entrada.",
+      });
+      return;
+    }
+
     const payload: any = {
       visitorId: selectedVisitor.id,
       sectorId: parseInt(data.sectorId, 10),
@@ -164,11 +201,37 @@ export default function VisitNew() {
       { data: payload },
       {
         onSuccess: (res) => {
+          const visitorQueryKey = getGetVisitorQueryKey(selectedVisitor.id);
+
+          // Atualiza imediatamente o histórico usado para detectar uma visita aberta.
+          queryClient.setQueryData(visitorQueryKey, (current: any) =>
+            current
+              ? {
+                  ...current,
+                  visits: [
+                    res,
+                    ...(current.visits ?? []).filter(
+                      (visit: any) => visit.id !== res.id,
+                    ),
+                  ],
+                }
+              : current,
+          );
           setCreatedVisit(res);
+          void Promise.all([
+            queryClient.invalidateQueries({
+              queryKey: getListVisitsQueryKey(),
+            }),
+            queryClient.invalidateQueries({ queryKey: visitorQueryKey }),
+          ]);
           toast({ title: "Visita registrada com sucesso!" });
         },
         onError: (err: any) => {
-          const msg = err.response?.data?.error;
+          const responseData = err.response?.data;
+          const msg = responseData?.error;
+          if (responseData?.code === "VISITOR_HAS_ONGOING_VISIT") {
+            setConflictingVisitId(responseData.visitId);
+          }
           toast({
             variant: "destructive",
             title: "Erro ao registrar visita",
@@ -189,13 +252,40 @@ export default function VisitNew() {
     );
   }
 
+  const pageHeader = (
+    <div className="flex items-start justify-between gap-6">
+      <div>
+        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+          <UserPlus className="h-8 w-8" />
+          Nova Visita
+        </h1>
+        <p className="mt-1 text-slate-500">
+          Registre a entrada de um visitante no prédio.
+        </p>
+      </div>
+      <div className="hidden text-right text-sm text-slate-500 sm:block">
+        <div className="flex items-center justify-end gap-2 font-semibold text-slate-600">
+          <span>Olá, {user?.name}</span>
+          <CircleUserRound className="h-5 w-5" />
+        </div>
+        <div className="mt-2 flex items-center justify-end gap-2">
+          <span>
+            {format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+          </span>
+          <CalendarDays className="h-5 w-5" />
+        </div>
+      </div>
+    </div>
+  );
+
   // Success screen
   if (createdVisit && labelConfig) {
     return (
       <AppLayout>
-        <div className="p-6 md:p-8 max-w-3xl mx-auto w-full">
+        <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+          {pageHeader}
           <div className="no-print">
-            <Card className="border-green-200 bg-green-50/30">
+            <Card className="border-slate-200 bg-white shadow-sm">
               <CardContent className="p-8 text-center space-y-6">
                 <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <CheckCircle2 className="w-8 h-8" />
@@ -216,7 +306,15 @@ export default function VisitNew() {
                     foi confirmada.
                   </p>
                 </div>
-                <div className="flex justify-center gap-4 pt-4">
+                <div className="flex flex-wrap justify-center gap-4 pt-4">
+                  <Button
+                    onClick={() => setLocation("/visits")}
+                    variant="outline"
+                    className="w-44 gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Voltar para visitas
+                  </Button>
                   <Button
                     onClick={handleReset}
                     variant="outline"
@@ -228,7 +326,7 @@ export default function VisitNew() {
                     variant="outline"
                     onClick={handlePrint}
                     disabled={!labelConfig}
-                    className="w-40 gap-2 bg-blue-600 hover:bg-blue-700"
+                    className="w-40 gap-2 border-0 bg-[#012c61] text-white hover:bg-[#01244f]"
                   >
                     <Printer className="w-4 h-4" />
                     Imprimir Etiqueta
@@ -258,32 +356,24 @@ export default function VisitNew() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <UserPlus className="w-8 h-8 text-primary" />
-            Nova Visita
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Registre a entrada de um visitante no prédio.
-          </p>
-        </div>
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        {pageHeader}
 
         {/* Step 1 — Visitor search */}
         {!selectedVisitor && (
-          <Card className="border-primary/20 shadow-md">
-            <CardHeader className="bg-primary/5 border-b border-primary/10 pb-4">
-              <CardTitle className="text-lg flex items-center gap-2 text-primary">
-                <Search className="w-5 h-5" />
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/70 px-6 py-5">
+              <CardTitle className="flex items-center gap-2 text-lg text-[#012c61]">
+                <Search className="h-5 w-5" />
                 Identificar Visitante
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <Input
                   placeholder="Digite o nome, CPF ou empresa para buscar..."
-                  className="pl-10 h-12 text-base"
+                  className="h-11 rounded-lg border-slate-300 pl-11 text-base focus-visible:ring-[#174f8c]"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   autoFocus
@@ -291,7 +381,7 @@ export default function VisitNew() {
               </div>
 
               {debouncedSearch.length >= 2 && (
-                <div className="bg-white border rounded-md shadow-sm divide-y">
+                <div className="divide-y overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
                   {searching ? (
                     <div className="p-4 text-center text-sm text-gray-500">
                       Buscando...
@@ -301,7 +391,7 @@ export default function VisitNew() {
                       {searchResults.map((v: any) => (
                         <div
                           key={v.id}
-                          className="p-3 hover:bg-blue-50 cursor-pointer flex justify-between items-center"
+                          className="flex cursor-pointer items-center justify-between p-4 transition-colors hover:bg-slate-50"
                           onClick={() => selectVisitor(v)}
                         >
                           <div>
@@ -316,13 +406,13 @@ export default function VisitNew() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-blue-600"
+                            className="text-[#174f8c] hover:bg-[#174f8c]/10 hover:text-[#012c61]"
                           >
                             Selecionar
                           </Button>
                         </div>
                       ))}
-                      <div className="p-3 bg-gray-50 text-center border-t">
+                      <div className="border-t bg-slate-50 p-3 text-center">
                         <span className="text-sm text-gray-600 mr-2">
                           Não é nenhum destes?
                         </span>
@@ -331,7 +421,7 @@ export default function VisitNew() {
                           size="sm"
                           onClick={() => setLocation("/visitors/new")}
                         >
-                          Cadastrar Novo
+                          Cadastrar novo
                         </Button>
                       </div>
                     </>
@@ -341,7 +431,10 @@ export default function VisitNew() {
                       <p className="text-gray-600">
                         Visitante não encontrado no sistema.
                       </p>
-                      <Button onClick={() => setLocation("/visitors/new")}>
+                      <Button
+                        className="bg-[#012c61] hover:bg-[#01244f]"
+                        onClick={() => setLocation("/visitors/new")}
+                      >
                         Cadastrar Novo Visitante
                       </Button>
                     </div>
@@ -357,10 +450,10 @@ export default function VisitNew() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               {/* Read-only visitor card */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between bg-gray-50/50 border-b border-gray-100 pb-3 pt-4 px-6">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <UserCheck className="w-5 h-5 text-green-600" />
+              <Card className="overflow-hidden border-slate-200 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-slate-100 bg-white px-6 py-5">
+                  <CardTitle className="flex items-center gap-2 text-lg text-[#012c61]">
+                    <UserCheck className="h-5 w-5 text-green-600" />
                     Visitante Identificado
                   </CardTitle>
                   <Button
@@ -368,14 +461,14 @@ export default function VisitNew() {
                     variant="ghost"
                     size="sm"
                     onClick={handleReset}
-                    className="h-8 text-muted-foreground gap-1"
+                    className="h-8 gap-1.5 text-[#174f8c] hover:bg-[#174f8c]/10 hover:text-[#012c61]"
                   >
-                    <X className="w-3.5 h-3.5" />
+                    <Pencil className="h-3.5 w-3.5" />
                     Alterar
                   </Button>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+                  <div className="grid grid-cols-1 gap-x-10 gap-y-4 text-sm sm:grid-cols-2 md:grid-cols-3">
                     <div>
                       <span className="text-gray-500 text-xs uppercase tracking-wide">
                         Nome
@@ -426,124 +519,176 @@ export default function VisitNew() {
                 </CardContent>
               </Card>
 
+              {ongoingVisitId && (
+                <Card className="border-amber-200 bg-amber-50 shadow-sm">
+                  <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                      <div>
+                        <p className="font-semibold text-amber-950">
+                          Este visitante já possui uma visita em andamento
+                        </p>
+                        <p className="mt-1 text-sm text-amber-800">
+                          {ongoingVisit?.sector?.name
+                            ? `Setor: ${ongoingVisit.sector.name}. `
+                            : ""}
+                          Finalize ou cancele a visita atual antes de registrar
+                          uma nova entrada.
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setLocation(`/visits/${ongoingVisitId}`)}
+                      className="shrink-0 border-amber-300 bg-white text-amber-950 hover:bg-amber-100"
+                    >
+                      Ver visita em andamento
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Visit details */}
-              <Card>
-                <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-3 pt-4 px-6">
-                  <CardTitle className="text-base">
-                    Detalhes da Visita
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="sectorId"
-                      render={({ field }) => (
-                        <FormItem className="md:col-span-2">
-                          <FormLabel>Setor de Destino *</FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={(value) => {
-                              field.onChange(value);
-                              form.trigger("sectorId");
-                            }}
-                          >
-                            <FormControl>
-                              <SelectTrigger ref={sectorRef}>
-                                <SelectValue placeholder="Selecione o setor" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {sectors?.map((s) => (
-                                <SelectItem key={s.id} value={s.id.toString()}>
-                                  {s.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {fieldConfig?.responsible !== "hidden" && (
+              {!ongoingVisitId && (
+                <Card className="overflow-hidden border-slate-200 shadow-sm">
+                  <CardHeader className="border-b border-slate-100 bg-white px-6 py-5">
+                    <CardTitle className="text-lg text-[#012c61]">
+                      Detalhes da Visita
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                       <FormField
                         control={form.control}
-                        name="responsible"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Servidor Responsável{" "}
-                              {fieldConfig?.responsible === "required" && "*"}
-                            </FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    {fieldConfig?.reason !== "hidden" && (
-                      <FormField
-                        control={form.control}
-                        name="reason"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Motivo {fieldConfig?.reason === "required" && "*"}
-                            </FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    {fieldConfig?.notes !== "hidden" && (
-                      <FormField
-                        control={form.control}
-                        name="notes"
+                        name="sectorId"
                         render={({ field }) => (
                           <FormItem className="md:col-span-2">
-                            <FormLabel>
-                              Observações{" "}
-                              {fieldConfig?.notes === "required" && "*"}
-                            </FormLabel>
-                            <FormControl>
-                              <Input {...field} />
-                            </FormControl>
+                            <FormLabel>Setor de Destino *</FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={(value) => {
+                                field.onChange(value);
+                                form.trigger("sectorId");
+                              }}
+                            >
+                              <FormControl>
+                                <SelectTrigger
+                                  ref={sectorRef}
+                                  className="h-11 rounded-lg border-slate-300 focus:ring-[#174f8c]"
+                                >
+                                  <SelectValue placeholder="Selecione o setor" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {sectors?.map((s) => (
+                                  <SelectItem
+                                    key={s.id}
+                                    value={s.id.toString()}
+                                  >
+                                    {s.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
 
-              <div className="flex justify-end gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleReset}
-                  className="w-32"
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createVisit.isPending}
-                  className="w-48 text-base font-semibold"
-                >
-                  {createVisit.isPending
-                    ? "Registrando..."
-                    : "Registrar Entrada"}
-                </Button>
-              </div>
+                      {fieldConfig?.responsible !== "hidden" && (
+                        <FormField
+                          control={form.control}
+                          name="responsible"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Servidor Responsável{" "}
+                                {fieldConfig?.responsible === "required" && "*"}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {fieldConfig?.reason !== "hidden" && (
+                        <FormField
+                          control={form.control}
+                          name="reason"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Motivo{" "}
+                                {fieldConfig?.reason === "required" && "*"}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+
+                      {fieldConfig?.notes !== "hidden" && (
+                        <FormField
+                          control={form.control}
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem className="md:col-span-2">
+                              <FormLabel>
+                                Observações{" "}
+                                {fieldConfig?.notes === "required" && "*"}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {!ongoingVisitId && (
+                <div className="flex flex-col-reverse justify-end gap-4 sm:flex-row">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleReset}
+                    className="h-11 w-full rounded-lg border-slate-300 sm:w-36"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createVisit.isPending || checkingOngoingVisit}
+                    className="h-11 w-full rounded-lg border-0 bg-[#012c61] text-base font-semibold text-white hover:bg-[#01244f] sm:w-52"
+                  >
+                    {checkingOngoingVisit
+                      ? "Verificando..."
+                      : createVisit.isPending
+                        ? "Registrando..."
+                        : "Registrar Entrada"}
+                  </Button>
+                </div>
+              )}
             </form>
           </Form>
         )}

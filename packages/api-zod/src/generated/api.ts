@@ -9,6 +9,12 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Generate and download a full database backup
+ */
+export const GenerateBackupResponse = zod.unknown()
+
+
+/**
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -1146,7 +1152,7 @@ export const GetVisitsBySectorResponse = zod.array(GetVisitsBySectorResponseItem
 
 
 /**
- * @summary Weekly visit chart data (last 7 days)
+ * @summary Weekly visit chart data (current Sunday-to-Saturday week)
  */
 export const GetWeeklyChartResponseItem = zod.object({
   "label": zod.string(),
@@ -1156,7 +1162,7 @@ export const GetWeeklyChartResponse = zod.array(GetWeeklyChartResponseItem)
 
 
 /**
- * @summary Monthly visit chart data (last 30 days)
+ * @summary Monthly visit chart data (current calendar month)
  */
 export const GetMonthlyChartResponseItem = zod.object({
   "label": zod.string(),

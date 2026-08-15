@@ -107,6 +107,27 @@ const migrations: Migration[] = [
       }'::jsonb;
     `,
   },
+  {
+    id: "006_single_ongoing_visit_per_visitor",
+    sql: `
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM visits
+          WHERE status = 'ongoing'
+          GROUP BY visitor_id
+          HAVING COUNT(*) > 1
+        ) THEN
+          RAISE EXCEPTION 'Existem visitantes com mais de uma visita em andamento. Finalize ou cancele as visitas duplicadas antes de iniciar a aplicação.';
+        END IF;
+      END $$;
+
+      CREATE UNIQUE INDEX IF NOT EXISTS visits_one_ongoing_per_visitor
+        ON visits (visitor_id)
+        WHERE status = 'ongoing';
+    `,
+  },
 ];
 
 async function applyMigration(

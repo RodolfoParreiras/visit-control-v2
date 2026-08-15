@@ -8,14 +8,11 @@ import {
 } from "@visit-control/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, ListTodo } from "lucide-react";
+import { CalendarDays, CircleUserRound, Save, ListTodo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -29,6 +26,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 const fieldStatus = z.enum(["hidden", "optional", "required"]);
 
@@ -45,6 +45,7 @@ const configSchema = z.object({
 type ConfigFormValues = z.infer<typeof configSchema>;
 
 export default function ConfigFields() {
+  const { user } = useAuth();
   const { data: config, isLoading } = useGetFieldConfig();
   const updateConfig = useUpdateFieldConfig();
   const queryClient = useQueryClient();
@@ -97,14 +98,14 @@ export default function ConfigFields() {
     label: string;
     description: string;
   }) => (
-    <div className="flex flex-col md:flex-row md:items-center justify-between py-4 border-b border-gray-100 last:border-0 gap-4">
+    <div className="flex flex-col justify-between gap-4 border-b border-slate-100 py-5 last:border-0 md:flex-row md:items-center">
       <div className="flex-1">
-        <h4 className="font-semibold text-gray-900">{label}</h4>
-        <p className="text-sm text-gray-500">{description}</p>
+        <h4 className="font-semibold text-[#012c61]">{label}</h4>
+        <p className="mt-0.5 text-sm text-slate-500">{description}</p>
       </div>
 
       {name === "cpf" ? (
-        <span className="text-sm font-medium">Obrigatório</span>
+        <span className="rounded-full border border-[#174f8c] px-3 py-1 text-sm font-semibold text-[#012c61]">Obrigatório</span>
       ) : (
         <FormField
           control={form.control}
@@ -115,7 +116,7 @@ export default function ConfigFields() {
                 <RadioGroup
                   onValueChange={field.onChange}
                   value={field.value}
-                  className="flex items-center space-x-6"
+                  className="flex flex-wrap items-center gap-x-7 gap-y-3"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="hidden" id={`${name}-hidden`} />
@@ -156,16 +157,16 @@ export default function ConfigFields() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-4xl mx-auto w-full space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <ListTodo className="w-8 h-8 text-primary" />
-            Campos do Formulário
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Configure quais campos são exibidos durante o registro de visitantes
-            e suas obrigatoriedades.
-          </p>
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]"><ListTodo className="h-8 w-8" />Campos do Formulário</h1>
+            <p className="mt-1 text-slate-500">Configure quais campos são exibidos durante o registro de visitantes e suas obrigatoriedades.</p>
+          </div>
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600"><span>Olá, {user?.name}</span><CircleUserRound className="h-5 w-5" /></div>
+            <div className="mt-2 flex items-center justify-end gap-2"><span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span><CalendarDays className="h-5 w-5" /></div>
+          </div>
         </div>
 
         {isLoading ? (
@@ -173,15 +174,8 @@ export default function ConfigFields() {
             Carregando configurações...
           </div>
         ) : (
-          <Card>
-            <CardHeader className="bg-gray-50/50 border-b border-gray-100">
-              <CardTitle className="text-lg">
-                Regras do Formulário de Entrada
-              </CardTitle>
-              <CardDescription>
-                Nome, CPF e Setor de Destino são sempre obrigatórios.
-              </CardDescription>
-            </CardHeader>
+          <Card className="overflow-hidden border-slate-200 shadow-sm">
+            <div className="border-b border-slate-100 px-6 py-5"><h2 className="font-semibold text-[#012c61]">Regras do formulário de entrada</h2><p className="mt-1 text-sm text-slate-500">Nome, CPF e Setor de Destino são sempre obrigatórios.</p></div>
             <CardContent className="p-0">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -223,11 +217,11 @@ export default function ConfigFields() {
                     />
                   </div>
 
-                  <div className="p-6 bg-gray-50/50 border-t border-gray-100 flex justify-end">
+                  <div className="flex justify-end border-t border-slate-100 bg-slate-50/60 p-6">
                     <Button
                       type="submit"
                       disabled={updateConfig.isPending}
-                      className="gap-2"
+                      className="h-11 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]"
                     >
                       <Save className="w-4 h-4" />
                       Salvar Configurações

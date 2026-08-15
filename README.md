@@ -164,6 +164,11 @@ sh ./scripts/start.sh
 
 ## Backup e Restauração
 
+Administradores também podem gerar e baixar um backup completo diretamente
+pela opção **Backup do Sistema** no menu de configurações. O arquivo é gerado
+no formato `.sql.gz`, registrado na auditoria e removido do servidor após o
+download.
+
 ### Backup
 
 ```bash
@@ -217,15 +222,15 @@ docker compose restart nginx
 
 ## Variáveis de Ambiente
 
-| Variável                 | Padrão                                                     | Descrição                                        |
-| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------ |
-| `DATABASE_URL`           | `postgresql://visit_user:visit_pass@db:5432/visit_control` | URL de conexão com o PostgreSQL                  |
-| `SESSION_SECRET`         | —                                                          | Chave secreta para assinatura JWT (obrigatória)  |
-| `NODE_ENV`               | `production`                                               | Ambiente de execução                             |
-| `PORT`                   | `3001`                                                     | Porta do backend                                 |
-| `ALLOWED_ORIGINS`        | `http://localhost`                                         | Origens CORS permitidas (separadas por vírgula)  |
-| `LOG_LEVEL`              | `info`                                                     | Nível de log (trace/debug/info/warn/error)       |
-| `DB_PASSWORD`            | `visit_pass`                                               | Senha do PostgreSQL                              |
+| Variável          | Padrão                                                     | Descrição                                       |
+| ----------------- | ---------------------------------------------------------- | ----------------------------------------------- |
+| `DATABASE_URL`    | `postgresql://visit_user:visit_pass@db:5432/visit_control` | URL de conexão com o PostgreSQL                 |
+| `SESSION_SECRET`  | —                                                          | Chave secreta para assinatura JWT (obrigatória) |
+| `NODE_ENV`        | `production`                                               | Ambiente de execução                            |
+| `PORT`            | `3001`                                                     | Porta do backend                                |
+| `ALLOWED_ORIGINS` | `http://localhost`                                         | Origens CORS permitidas (separadas por vírgula) |
+| `LOG_LEVEL`       | `info`                                                     | Nível de log (trace/debug/info/warn/error)      |
+| `DB_PASSWORD`     | `visit_pass`                                               | Senha do PostgreSQL                             |
 
 ---
 

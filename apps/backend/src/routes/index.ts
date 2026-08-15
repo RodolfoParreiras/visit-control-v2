@@ -10,6 +10,7 @@ import reportsRouter from "./reports";
 import auditRouter from "./audit";
 import configRouter from "./config";
 import serviceRouter from "./service";
+import backupRouter from "./backup";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(reportsRouter);
 router.use(auditRouter);
 router.use(configRouter);
 router.use(serviceRouter);
+router.use(backupRouter);
 
 export default router;

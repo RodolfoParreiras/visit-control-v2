@@ -4,7 +4,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { maskCpf, isValidCpf, stripCpfMask } from "@/lib/cpf";
 import { useCreateVisitor, useGetFieldConfig } from "@visit-control/api-client";
 import type { VisitorInput } from "@visit-control/api-client";
-import { UserPlus } from "lucide-react";
+import { CalendarDays, CircleUserRound, UserPlus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,8 +20,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function VisitorNew() {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
@@ -112,28 +116,38 @@ export default function VisitorNew() {
 
   return (
     <AppLayout>
-      <div className="p-6 md:p-8 max-w-2xl mx-auto w-full space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <UserPlus className="w-8 h-8 text-primary" />
-            Cadastrar Visitante
-          </h1>
-          <p className="text-gray-500 mt-1">
-            Preencha os dados do novo visitante.
-          </p>
+      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-6">
+          <div>
+            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+              <UserPlus className="h-8 w-8" />
+              Cadastrar Visitante
+            </h1>
+            <p className="mt-1 text-slate-500">Preencha os dados do novo visitante.</p>
+          </div>
+          <div className="hidden text-right text-sm text-slate-500 sm:block">
+            <div className="flex items-center justify-end gap-2 font-semibold text-slate-600">
+              <span>Olá, {user?.name}</span>
+              <CircleUserRound className="h-5 w-5" />
+            </div>
+            <div className="mt-2 flex items-center justify-end gap-2">
+              <span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span>
+              <CalendarDays className="h-5 w-5" />
+            </div>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-3 pt-4 px-6">
-            <CardTitle className="text-base">Dados do Visitante</CardTitle>
+        <Card className="max-w-5xl overflow-hidden border-slate-200 shadow-sm">
+          <CardHeader className="border-b border-slate-100 bg-white px-6 py-5">
+            <CardTitle className="text-lg text-[#012c61]">Dados do Visitante</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
+                className="space-y-5"
               >
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="name"
@@ -145,6 +159,7 @@ export default function VisitorNew() {
                             autoFocus
                             {...field}
                             placeholder="Nome completo do visitante"
+                            className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
                           />
                         </FormControl>
                         <FormMessage />
@@ -164,6 +179,7 @@ export default function VisitorNew() {
                             placeholder="000.000.000-00"
                             maxLength={14}
                             onChange={handleCpfChange(field.onChange)}
+                            className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
                           />
                         </FormControl>
                         <FormMessage />
@@ -181,7 +197,7 @@ export default function VisitorNew() {
                             Telefone {fieldConfig?.phone === "required" && "*"}
                           </FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -200,7 +216,7 @@ export default function VisitorNew() {
                             {fieldConfig?.company === "required" && "*"}
                           </FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -218,7 +234,7 @@ export default function VisitorNew() {
                             Cidade {fieldConfig?.city === "required" && "*"}
                           </FormLabel>
                           <FormControl>
-                            <Input {...field} />
+                            <Input {...field} className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -227,18 +243,19 @@ export default function VisitorNew() {
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
+                <div className="flex flex-col-reverse justify-end gap-3 pt-2 sm:flex-row">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setLocation("/visits/new")}
+                    className="h-11 rounded-lg border-slate-300 px-6"
                   >
                     Cancelar
                   </Button>
                   <Button
                     type="submit"
                     disabled={createVisitor.isPending}
-                    className="w-44"
+                    className="h-11 w-full rounded-lg border-0 bg-[#012c61] px-6 font-semibold text-white hover:bg-[#01244f] sm:w-48"
                   >
                     {createVisitor.isPending
                       ? "Salvando..."

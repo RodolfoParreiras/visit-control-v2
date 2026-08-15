@@ -24,6 +24,7 @@ import AuditLogs from "@/pages/audit";
 import NotFound from "@/pages/not-found";
 import ServiceCenter from "@/pages/service-center";
 import CallDisplay from "@/pages/call-display";
+import Backup from "@/pages/backup";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -131,6 +132,12 @@ function Router() {
       <Route path="/audit">
         <PrivateRoute adminOnly>
           <AuditLogs />
+        </PrivateRoute>
+      </Route>
+
+      <Route path="/backup">
+        <PrivateRoute adminOnly>
+          <Backup />
         </PrivateRoute>
       </Route>
 
