@@ -1,5 +1,26 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
+
+@keyframes call-display-visitor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.12;
+  }
+}
+
+.call-display-visitor-blink {
+  animation: call-display-visitor-blink 500ms ease-in-out 5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .call-display-visitor-blink {
+    animation: none;
+  }
+}
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

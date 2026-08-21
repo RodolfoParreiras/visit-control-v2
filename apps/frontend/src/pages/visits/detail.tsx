@@ -54,6 +54,7 @@ import { printVisitLabel } from "@/lib/print-label";
 import { maskCpf } from "@/lib/cpf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export default function VisitDetail() {
   const { id } = useParams<{ id: string }>();
@@ -76,6 +77,7 @@ export default function VisitDetail() {
   const labelRef = useRef<HTMLDivElement>(null);
 
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [checkoutConfirmationOpen, setCheckoutConfirmationOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({
@@ -127,12 +129,12 @@ export default function VisitDetail() {
   }
 
   const handleCheckout = () => {
-    if (confirm("Confirmar a saída deste visitante?")) {
-      checkoutVisit.mutate(
+    checkoutVisit.mutate(
         { id: visitId },
         {
           onSuccess: () => {
             void refreshVisitData(visit.visitorId);
+            setCheckoutConfirmationOpen(false);
             toast({ title: "Saída registrada com sucesso" });
           },
           onError: () =>
@@ -142,7 +144,6 @@ export default function VisitDetail() {
             }),
         },
       );
-    }
   };
 
   const handleCancelSubmit = () => {
@@ -277,7 +278,7 @@ export default function VisitDetail() {
             {visit.status === "ongoing" && (
               <Button
                 variant="outline"
-                onClick={handleCheckout}
+                onClick={() => setCheckoutConfirmationOpen(true)}
                 disabled={checkoutVisit.isPending}
                 className="h-11 gap-2 rounded-lg border-slate-300 bg-white px-4 text-[#012c61] hover:border-red-600 hover:bg-red-600 hover:text-white"
               >
@@ -444,6 +445,16 @@ export default function VisitDetail() {
           <PrintLabel visit={visit} config={labelConfig} />
         </div>
       )}
+
+      <ConfirmDialog
+        open={checkoutConfirmationOpen}
+        onOpenChange={setCheckoutConfirmationOpen}
+        title="Registrar saída?"
+        description={`Confirma a saída de ${visit.visitor?.name ?? 'este visitante'}? O horário será registrado automaticamente.`}
+        confirmLabel="Registrar saída"
+        isPending={checkoutVisit.isPending}
+        onConfirm={handleCheckout}
+      />
 
       {isAdmin && (
         <>

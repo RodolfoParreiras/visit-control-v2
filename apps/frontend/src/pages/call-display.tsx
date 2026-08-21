@@ -80,7 +80,10 @@ export default function CallDisplay() {
         {data?.current ? (
           <section className="overflow-hidden rounded-3xl border border-t-4 border-slate-200 border-t-[#b2d233] bg-white px-7 py-8 text-center shadow-lg shadow-[#012c61]/10 md:px-12 md:py-9">
             <p className="text-lg font-bold tracking-[0.28em] text-[#012c61] md:text-xl">CHAMADA ATUAL</p>
-            <h1 className="mt-3 break-words text-5xl font-black uppercase leading-none text-[#012c61] md:text-7xl">
+            <h1
+              key={data.current.id}
+              className="call-display-visitor-blink mt-3 break-words text-5xl font-black uppercase leading-none text-[#012c61] md:text-7xl"
+            >
               {data.current.visitorName}
             </h1>
             <div className="mt-4 flex items-baseline justify-center gap-3 text-2xl md:text-3xl">

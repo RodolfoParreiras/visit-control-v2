@@ -27,6 +27,7 @@ import { serviceApi } from '@/lib/service-api';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -54,7 +55,9 @@ export default function Sectors() {
   const [search, setSearch] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSector, setEditingSector] = useState<Sector | null>(null);
+  const [sectorToDelete, setSectorToDelete] = useState<Sector | null>(null);
   const [deskSector, setDeskSector] = useState<Sector | null>(null);
+  const [deskToDelete, setDeskToDelete] = useState<{ id: number; name: string } | null>(null);
   const [deskName, setDeskName] = useState('');
   const { data: desks } = useQuery({ queryKey: ['service-desks', deskSector?.id], queryFn: () => serviceApi.desks(deskSector!.id), enabled: !!deskSector });
   const refreshDesks = () => queryClient.invalidateQueries({ queryKey: ['service-desks', deskSector?.id] });
@@ -120,11 +123,12 @@ export default function Sectors() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este setor?')) {
-      deleteSector.mutate({ id }, {
+  const handleDelete = () => {
+    if (sectorToDelete) {
+      deleteSector.mutate({ id: sectorToDelete.id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListSectorsQueryKey() });
+          setSectorToDelete(null);
           toast({ title: 'Setor excluído com sucesso' });
         },
         onError: () => toast({ variant: 'destructive', title: 'Erro ao excluir setor' })
@@ -204,7 +208,7 @@ export default function Sectors() {
                       <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => openEditDialog(sector)}>
                         <Edit className="h-4 w-4" />Editar
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Excluir setor" onClick={() => handleDelete(sector.id)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Excluir setor" onClick={() => setSectorToDelete(sector)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -280,10 +284,38 @@ export default function Sectors() {
         <DialogContent>
           <DialogHeader><DialogTitle>Mesas — {deskSector?.name}</DialogTitle></DialogHeader>
           <div className="flex gap-2"><Input value={deskName} onChange={(e) => setDeskName(e.target.value)} placeholder="Ex: Mesa 01" /><Button onClick={() => createDesk.mutate()} disabled={!deskName.trim() || createDesk.isPending}><Plus className="w-4 h-4 mr-2" />Adicionar</Button></div>
-          <div className="space-y-2 max-h-80 overflow-y-auto">{desks?.map((desk) => <div key={desk.id} className="flex items-center justify-between rounded-lg border p-3"><span className={desk.active ? 'font-medium' : 'text-muted-foreground line-through'}>{desk.name}</span><div className="flex items-center gap-2"><Switch checked={desk.active} onCheckedChange={async (active) => { await serviceApi.updateDesk(deskSector!.id, desk.id, { active }); refreshDesks(); }} /><Button variant="ghost" size="icon" onClick={async () => { if (confirm('Excluir esta mesa?')) { await serviceApi.deleteDesk(deskSector!.id, desk.id); refreshDesks(); } }}><Trash2 className="w-4 h-4 text-red-600" /></Button></div></div>)}</div>
+          <div className="space-y-2 max-h-80 overflow-y-auto">{desks?.map((desk) => <div key={desk.id} className="flex items-center justify-between rounded-lg border p-3"><span className={desk.active ? 'font-medium' : 'text-muted-foreground line-through'}>{desk.name}</span><div className="flex items-center gap-2"><Switch checked={desk.active} onCheckedChange={async (active) => { await serviceApi.updateDesk(deskSector!.id, desk.id, { active }); refreshDesks(); }} /><Button variant="ghost" size="icon" onClick={() => setDeskToDelete({ id: desk.id, name: desk.name })}><Trash2 className="w-4 h-4 text-red-600" /></Button></div></div>)}</div>
           <DialogFooter><Button variant="outline" onClick={() => setDeskSector(null)}>Fechar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!sectorToDelete}
+        onOpenChange={(open) => !open && setSectorToDelete(null)}
+        title="Excluir setor?"
+        description={`O setor ${sectorToDelete?.name ?? ''} será excluído permanentemente. Esta ação não poderá ser desfeita.`}
+        confirmLabel="Excluir setor"
+        destructive
+        isPending={deleteSector.isPending}
+        onConfirm={handleDelete}
+      />
+      <ConfirmDialog
+        open={!!deskToDelete}
+        onOpenChange={(open) => !open && setDeskToDelete(null)}
+        title="Excluir mesa?"
+        description={`A mesa ${deskToDelete?.name ?? ''} será removida deste setor. Esta ação não poderá ser desfeita.`}
+        confirmLabel="Excluir mesa"
+        destructive
+        onConfirm={() => {
+          if (!deskSector || !deskToDelete) return;
+          void serviceApi.deleteDesk(deskSector.id, deskToDelete.id).then(() => {
+            setDeskToDelete(null);
+            void refreshDesks();
+            toast({ title: 'Mesa excluída com sucesso' });
+          }).catch((error: Error) => {
+            toast({ variant: 'destructive', title: error.message });
+          });
+        }}
+      />
     </AppLayout>
   );
 }

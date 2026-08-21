@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { formatDateOnly } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 function getTodayInSaoPaulo() {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -41,6 +42,7 @@ export default function VisitsList() {
   const { toast } = useToast();
 
   const [page, setPage] = useState(1);
+  const [visitToCheckout, setVisitToCheckout] = useState<{ id: number; visitorName: string } | null>(null);
   const [search, setSearch] = useState('');
   const [sectorId, setSectorId] = useState<string>('all');
   const [status, setStatus] = useState<string>('all');
@@ -87,11 +89,12 @@ export default function VisitsList() {
     resetPage();
   };
 
-  const handleCheckout = (id: number) => {
-    if (confirm('Confirmar a saída deste visitante?')) {
-      checkoutVisit.mutate({ id }, {
+  const handleCheckout = () => {
+    if (visitToCheckout) {
+      checkoutVisit.mutate({ id: visitToCheckout.id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListVisitsQueryKey() });
+          setVisitToCheckout(null);
           toast({ title: 'Saída registrada com sucesso' });
         },
         onError: () => toast({ variant: 'destructive', title: 'Erro ao registrar saída' })
@@ -236,7 +239,7 @@ export default function VisitsList() {
                       <TableCell><StatusBadge status={visit.status} /></TableCell>
                       <TableCell className="text-right whitespace-nowrap space-x-1">
                         {visit.status === 'ongoing' && (
-                          <Button variant="outline" size="sm" className="h-9 border-slate-200 px-3 text-[#012c61] hover:border-transparent hover:bg-red-600 hover:text-white" onClick={() => handleCheckout(visit.id)} disabled={checkoutVisit.isPending}>
+                          <Button variant="outline" size="sm" className="h-9 border-slate-200 px-3 text-[#012c61] hover:border-transparent hover:bg-red-600 hover:text-white" onClick={() => setVisitToCheckout({ id: visit.id, visitorName: visit.visitor?.name ?? 'este visitante' })} disabled={checkoutVisit.isPending}>
                             <CheckoutIcon className="mr-1.5 h-3.5 w-3.5" />Saída
                           </Button>
                         )}
@@ -264,7 +267,15 @@ export default function VisitsList() {
           )}
         </Card>
       </div>
-
+      <ConfirmDialog
+        open={!!visitToCheckout}
+        onOpenChange={(open) => !open && setVisitToCheckout(null)}
+        title="Registrar saída?"
+        description={`Confirma a saída de ${visitToCheckout?.visitorName ?? 'este visitante'}? O horário será registrado automaticamente.`}
+        confirmLabel="Registrar saída"
+        isPending={checkoutVisit.isPending}
+        onConfirm={handleCheckout}
+      />
     </AppLayout>
   );
 }

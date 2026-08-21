@@ -28,6 +28,7 @@ import { ptBR } from 'date-fns/locale';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 const defaultVisitorPermissions = {
   editVisitorName: true,
@@ -70,6 +71,7 @@ export default function Users() {
   const deleteUser = useDeleteUser();
 
   const [search, setSearch] = useState('');
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -146,11 +148,12 @@ export default function Users() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este usuário?')) {
-      deleteUser.mutate({ id }, {
+  const handleDelete = () => {
+    if (userToDelete) {
+      deleteUser.mutate({ id: userToDelete.id }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+          setUserToDelete(null);
           toast({ title: 'Usuário excluído com sucesso' });
         },
         onError: () => toast({ variant: 'destructive', title: 'Erro ao excluir usuário' })
@@ -223,7 +226,7 @@ export default function Users() {
                       <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => openEditDialog(user)}>
                         <Edit className="h-4 w-4" />Editar
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Excluir usuário" onClick={() => handleDelete(user.id)}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Excluir usuário" onClick={() => setUserToDelete(user)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </TableCell>
@@ -345,6 +348,16 @@ export default function Users() {
           </Form>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!userToDelete}
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+        title="Excluir usuário?"
+        description={`O acesso de ${userToDelete?.name ?? ''} será removido permanentemente. Esta ação não poderá ser desfeita.`}
+        confirmLabel="Excluir usuário"
+        destructive
+        isPending={deleteUser.isPending}
+        onConfirm={handleDelete}
+      />
     </AppLayout>
   );
 }
