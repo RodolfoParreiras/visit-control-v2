@@ -18,7 +18,8 @@
 packages/api-spec/
 
 # ── Scripts de operação (não são necessários dentro da imagem) ────────────────
-scripts/
+scripts/*
+!scripts/ensure-pnpm.cjs
 
 # ── Documentação e arquivos de projeto ───────────────────────────────────────
 README.md

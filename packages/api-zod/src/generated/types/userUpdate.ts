@@ -12,8 +12,6 @@ import type { UserUpdateStatus } from './userUpdateStatus';
 export interface UserUpdate {
   name?: string;
   login?: string;
-  /** @minLength 8 */
-  password?: string;
   role?: UserUpdateRole;
   /** @nullable */
   sectorId?: number | null;

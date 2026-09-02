@@ -10,6 +10,7 @@ import { serviceApi } from '@/lib/service-api';
 import { useToast } from '@/hooks/use-toast';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -21,17 +22,15 @@ export default function ServiceCenter() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deskId, setDeskId] = useState<string>('');
+  const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
   const { data, isLoading, error } = useQuery({ queryKey: centralKey, queryFn: () => serviceApi.central(), refetchInterval: 30000 });
 
   useEffect(() => {
-    const events = new EventSource('/api/service/display/events');
-    events.addEventListener('update', () => queryClient.invalidateQueries({ queryKey: centralKey }));
-    return () => events.close();
-  }, [queryClient]);
-
-  useEffect(() => {
     if (!deskId && data?.sector.usesDesks) {
-      const first = data.desks.find((desk) => desk.active);
+      const preferred = data.current?.deskId
+        ? data.desks.find((desk) => desk.id === data.current?.deskId && desk.active)
+        : undefined;
+      const first = preferred ?? data.desks.find((desk) => desk.active);
       if (first) setDeskId(String(first.id));
     }
   }, [data, deskId]);
@@ -47,9 +46,22 @@ export default function ServiceCenter() {
     onSuccess: () => toast({ title: 'Chamada repetida no visor' }),
     onError: (e: Error) => toast({ variant: 'destructive', title: e.message }),
   });
-  const complete = useMutation({
-    mutationFn: (id: number) => serviceApi.complete(id),
-    onSuccess: () => { refresh(); toast({ title: 'Atendimento finalizado' }); },
+  const completeAndCallNext = useMutation({
+    mutationFn: (id: number) => serviceApi.completeAndCallNext(id, {
+      deskId: data?.sector.usesDesks ? Number(deskId) : null,
+    }),
+    onSuccess: (result) => {
+      setConfirmCompleteOpen(false);
+      refresh();
+      toast({
+        title: result.calledNext
+          ? 'Atendimento finalizado e próximo visitante chamado'
+          : 'Atendimento finalizado e saída registrada',
+        description: result.calledNext
+          ? 'A saída foi contabilizada e a próxima pessoa já foi chamada.'
+          : 'A saída foi contabilizada. Não há outras pessoas aguardando.',
+      });
+    },
     onError: (e: Error) => toast({ variant: 'destructive', title: e.message }),
   });
 
@@ -57,6 +69,9 @@ export default function ServiceCenter() {
   if (error || !data) return <AppLayout><div className="p-8"><Card><CardContent className="pt-6 text-destructive">{(error as Error)?.message ?? 'Central indisponível'}</CardContent></Card></div></AppLayout>;
 
   const activeDesks = data.desks.filter((desk) => desk.active);
+  const canCallNext = !data.current
+    && data.queue.length > 0
+    && (!data.sector.usesDesks || Boolean(deskId));
   return (
     <AppLayout>
       <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
@@ -73,11 +88,11 @@ export default function ServiceCenter() {
 
         <Card className="border-slate-200 p-5 shadow-sm sm:p-6">
           <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
-            <div className="max-w-xl space-y-2">
-              <Label className="text-sm font-semibold text-[#012c61]">Forma de atendimento</Label>
+            <div className="max-w-md space-y-2.5">
+              <Label className="text-lg font-semibold leading-none tracking-tight text-[#012c61]">Forma de atendimento</Label>
               {data.sector.usesDesks ? (
                 <Select value={deskId} onValueChange={setDeskId}>
-                  <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]"><SelectValue placeholder="Selecione uma mesa" /></SelectTrigger>
+                  <SelectTrigger className="h-10 rounded-lg border-slate-300 bg-white shadow-sm focus:border-[#174f8c] focus:ring-[#174f8c]"><SelectValue placeholder="Selecione uma mesa" /></SelectTrigger>
                   <SelectContent>{activeDesks.map((desk) => <SelectItem key={desk.id} value={String(desk.id)}>{desk.name}</SelectItem>)}</SelectContent>
                 </Select>
               ) : <div className="flex h-11 items-center font-semibold text-[#012c61]">Chamada geral do setor <span className="ml-2 rounded-full bg-green-100 px-2.5 py-1 text-xs text-green-800">Atendimento ativo</span></div>}
@@ -93,7 +108,7 @@ export default function ServiceCenter() {
               <div><div className="break-words text-2xl font-bold text-[#012c61]">{data.current.visitorName}</div><p className="mt-1 text-slate-500">Chamado às {time(data.current.calledAt)}{data.current.deskName ? ` — ${data.current.deskName}` : ''}</p></div>
               <div className="flex flex-wrap gap-3">
                 <Button variant="outline" className="h-11 rounded-lg border-slate-200 px-5 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => recall.mutate(data.current!.id)} disabled={recall.isPending}><RefreshCw className="mr-2 h-4 w-4" />Chamar novamente</Button>
-                <Button className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]" onClick={() => complete.mutate(data.current!.id)} disabled={complete.isPending}><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar atendimento</Button>
+                <Button className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]" onClick={() => setConfirmCompleteOpen(true)} disabled={completeAndCallNext.isPending || (data.sector.usesDesks && !deskId)}><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar e chamar próximo</Button>
               </div>
             </CardContent>
           </Card>
@@ -102,7 +117,9 @@ export default function ServiceCenter() {
         <Card className="overflow-hidden border-slate-200 shadow-sm">
           <CardHeader className="flex-row items-center justify-between gap-4 border-b border-slate-100 px-6 py-5">
             <div><CardTitle className="text-lg text-[#012c61]">Fila de espera</CardTitle><p className="mt-1 text-sm text-slate-500">{data.queue.length} {data.queue.length === 1 ? 'pessoa aguardando' : 'pessoas aguardando'}</p></div>
-            <Button size="lg" className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f] disabled:bg-slate-400" onClick={() => callNext.mutate()} disabled={callNext.isPending || !!data.current || data.queue.length === 0 || (data.sector.usesDesks && !deskId)}><Bell className="mr-2 h-5 w-5" />CHAMAR PRÓXIMO</Button>
+            {canCallNext && (
+              <Button size="lg" className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f] disabled:bg-slate-400" onClick={() => callNext.mutate()} disabled={callNext.isPending}><Bell className="mr-2 h-5 w-5" />CHAMAR PRÓXIMO</Button>
+            )}
           </CardHeader>
           <CardContent className="p-0">
             <Table className="table-fixed"><TableHeader><TableRow className="bg-slate-50 hover:bg-slate-50"><TableHead className="w-[15%]">Posição</TableHead><TableHead className="w-[65%]">Visitante</TableHead><TableHead className="w-[20%]">Entrada</TableHead></TableRow></TableHeader>
@@ -111,6 +128,16 @@ export default function ServiceCenter() {
             <p className="flex items-center gap-2 border-t border-slate-100 px-6 py-4 text-xs text-slate-500"><span className="h-2 w-2 rounded-full bg-green-500" />Atualização automática</p>
           </CardContent>
         </Card>
+
+        <ConfirmDialog
+          open={confirmCompleteOpen}
+          onOpenChange={setConfirmCompleteOpen}
+          title="Finalizar atendimento e chamar o próximo?"
+          description={`O atendimento de ${data.current?.visitorName ?? 'visitante atual'} será encerrado, a saída será registrada para a recepção e a próxima pessoa da fila será chamada automaticamente.`}
+          confirmLabel="Finalizar e chamar"
+          isPending={completeAndCallNext.isPending}
+          onConfirm={() => data.current && completeAndCallNext.mutate(data.current.id)}
+        />
       </div>
     </AppLayout>
   );

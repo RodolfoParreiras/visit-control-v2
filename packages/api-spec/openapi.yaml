@@ -273,6 +273,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /users/{id}/reset-password:
+    post:
+      operationId: resetUserPassword
+      tags: [users]
+      summary: Reset user password to the initial password
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
   # ── Sectors ───────────────────────────────────────────────────────────────
   /sectors:
     get:
@@ -1038,15 +1055,12 @@ components:
 
     UserInput:
       type: object
-      required: [name, login, password, role]
+      required: [name, login, role]
       properties:
         name:
           type: string
         login:
           type: string
-        password:
-          type: string
-          minLength: 8
         role:
           type: string
           enum: [admin, receptionist, attendant]
@@ -1076,9 +1090,6 @@ components:
           type: string
         login:
           type: string
-        password:
-          type: string
-          minLength: 8
         role:
           type: string
           enum: [admin, receptionist, attendant]

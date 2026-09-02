@@ -1,0 +1,20 @@
+{
+  "name": "@visit-control/desktop",
+  "version": "1.0.3",
+  "description": "Aplicativo desktop do Sistema de Controle de Visitantes",
+  "private": true,
+  "main": "src/main.cjs",
+  "scripts": { "dev": "electron .", "build": "electron-builder --win nsis", "build:dir": "electron-builder --win dir" },
+  "devDependencies": { "electron": "^37.2.6", "electron-builder": "^26.0.12" },
+  "build": {
+    "npmRebuild": false,
+    "electronDist": "electron-dist-clean",
+    "appId": "br.gov.paraibadosul.visitcontrol",
+    "productName": "Controle de Visitantes",
+    "artifactName": "Controle-de-Visitantes-Setup-${version}.${ext}",
+    "directories": { "output": "release-scrollbar" },
+    "files": ["src/**/*", "assets/**/*", "package.json"],
+    "win": { "icon": "assets/icon.ico", "target": ["nsis"] },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true, "createStartMenuShortcut": true, "shortcutName": "Controle de Visitantes" }
+  }
+}

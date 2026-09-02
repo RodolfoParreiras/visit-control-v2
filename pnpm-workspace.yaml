@@ -28,7 +28,9 @@ autoInstallPeers: false
 onlyBuiltDependencies:
   - esbuild
   - core-js
+  - electron
 
 allowBuilds:
   core-js: true
   esbuild: true
+  electron: true

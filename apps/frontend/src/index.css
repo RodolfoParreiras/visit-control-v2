@@ -201,6 +201,50 @@
   }
 }
 
+/* Rolagem da navegação lateral alinhada à identidade visual do sistema. */
+.sidebar-scrollbar {
+  overscroll-behavior: contain;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: hsl(var(--sidebar));
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 44px;
+  border: 1px solid hsl(var(--sidebar));
+  border-radius: 999px;
+  background-color: hsl(211 22% 68% / 0.82);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(211 28% 78% / 0.96);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:active {
+  background-color: hsl(211 25% 60%);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-button,
+.sidebar-scrollbar::-webkit-scrollbar-corner {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}
+
+/* Fallback para Firefox, sem interferir no Chromium usado pelo aplicativo. */
+@supports not selector(::-webkit-scrollbar) {
+  .sidebar-scrollbar {
+    scrollbar-color: hsl(211 22% 68% / 0.82) hsl(var(--sidebar));
+    scrollbar-width: thin;
+  }
+}
+
 @media print {
   .no-print { display: none !important; }
   .print-only { display: block !important; }

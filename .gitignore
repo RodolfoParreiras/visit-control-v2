@@ -10,6 +10,9 @@ node_modules/
 # Build
 dist/
 apps/*/dist/
+apps/desktop/release*/
+apps/desktop/electron-dist*/
+apps/desktop/build-tools/
 
 # TypeScript
 *.tsbuildinfo

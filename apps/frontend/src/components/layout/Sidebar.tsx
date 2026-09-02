@@ -75,7 +75,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 space-y-1.5 overflow-y-auto px-3 py-5">
+      <nav className="sidebar-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-5">
         {user?.role === "attendant" ? (
           item("/service-center", "Central de Atendimento", Headphones)
         ) : (

@@ -88,8 +88,6 @@ export const UserInputStatus = {
 export interface UserInput {
   name: string;
   login: string;
-  /** @minLength 8 */
-  password: string;
   role: UserInputRole;
   /** @nullable */
   sectorId?: number | null;
@@ -123,8 +121,6 @@ export const UserUpdateStatus = {
 export interface UserUpdate {
   name?: string;
   login?: string;
-  /** @minLength 8 */
-  password?: string;
   role?: UserUpdateRole;
   /** @nullable */
   sectorId?: number | null;

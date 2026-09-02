@@ -7,6 +7,7 @@ WORKDIR /app
 
 # Copia manifests para cache de camadas
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* tsconfig*.json ./
+COPY scripts/ensure-pnpm.cjs ./scripts/ensure-pnpm.cjs
 COPY packages/db/package.json     ./packages/db/
 COPY packages/api-zod/package.json ./packages/api-zod/
 COPY apps/backend/package.json    ./apps/backend/

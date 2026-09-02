@@ -150,14 +150,11 @@ export const ListUsersResponse = zod.array(ListUsersResponseItem)
 /**
  * @summary Create user
  */
-export const createUserBodyPasswordMin = 8;
-
 export const createUserBodyStatusDefault = `active`;
 
 export const CreateUserBody = zod.object({
   "name": zod.string(),
   "login": zod.string(),
-  "password": zod.string().min(createUserBodyPasswordMin),
   "role": zod.enum(['admin', 'receptionist', 'attendant']),
   "sectorId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive']).default(createUserBodyStatusDefault),
@@ -224,14 +221,9 @@ export const UpdateUserParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const updateUserBodyPasswordMin = 8;
-
-
-
 export const UpdateUserBody = zod.object({
   "name": zod.string().optional(),
   "login": zod.string().optional(),
-  "password": zod.string().min(updateUserBodyPasswordMin).optional(),
   "role": zod.enum(['admin', 'receptionist', 'attendant']).optional(),
   "sectorId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive']).optional(),
@@ -272,6 +264,19 @@ export const DeleteUserParams = zod.object({
 })
 
 export const DeleteUserResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Reset user password to the initial password
+ */
+export const ResetUserPasswordParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ResetUserPasswordResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string().optional()
 })

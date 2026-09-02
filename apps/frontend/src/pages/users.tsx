@@ -5,13 +5,14 @@ import {
   useCreateUser, 
   useUpdateUser, 
   useDeleteUser,
+  useResetUserPassword,
   User,
   getListUsersQueryKey,
   useListSectors
 } from '@visit-control/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarDays, CircleUserRound, UserCog, Plus, Edit, Trash2, Search } from 'lucide-react';
+import { CalendarDays, CircleUserRound, UserCog, Plus, Edit, Trash2, Search, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -38,13 +39,11 @@ const defaultVisitorPermissions = {
   editVisitorCity: true,
 };
 
+const INITIAL_PASSWORD = 'Mudar@123!';
+
 const userSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
   login: z.string().min(1, 'Login é obrigatório'),
-  password: z
-    .string()
-    .optional()
-    .refine((value) => !value || value.length >= 8, 'A senha deve ter pelo menos 8 caracteres'),
   role: z.enum(['admin', 'receptionist', 'attendant']),
   sectorId: z.number().int().positive().nullable().optional(),
   status: z.enum(['active', 'inactive']),
@@ -69,9 +68,11 @@ export default function Users() {
   const createUser = useCreateUser();
   const updateUser = useUpdateUser();
   const deleteUser = useDeleteUser();
+  const resetUserPassword = useResetUserPassword();
 
   const [search, setSearch] = useState('');
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [userToReset, setUserToReset] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
@@ -80,7 +81,6 @@ export default function Users() {
     defaultValues: {
       name: '',
       login: '',
-      password: '',
       role: 'receptionist',
       sectorId: null,
       status: 'active',
@@ -93,7 +93,6 @@ export default function Users() {
     form.reset({
       name: '',
       login: '',
-      password: '',
       role: 'receptionist',
       sectorId: null,
       status: 'active',
@@ -107,7 +106,6 @@ export default function Users() {
     form.reset({
       name: user.name,
       login: user.login,
-      password: '', // Não preencher a senha na edição
       role: user.role,
       sectorId: user.sectorId ?? null,
       status: user.status,
@@ -119,11 +117,7 @@ export default function Users() {
   const onSubmit = (data: UserFormValues) => {
     if (data.role !== 'attendant') data.sectorId = null;
     if (editingUser) {
-      // Remover a senha do payload se estiver em branco na edição
-      const updateData = { ...data };
-      if (!updateData.password) delete updateData.password;
-      
-      updateUser.mutate({ id: editingUser.id, data: updateData }, {
+      updateUser.mutate({ id: editingUser.id, data }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
           setIsDialogOpen(false);
@@ -132,12 +126,7 @@ export default function Users() {
         onError: () => toast({ variant: 'destructive', title: 'Erro ao atualizar usuário' })
       });
     } else {
-      if (!data.password) {
-        form.setError('password', { message: 'Senha é obrigatória para novos usuários' });
-        return;
-      }
-      // O cast abaixo é seguro pois verificamos a senha acima
-      createUser.mutate({ data: data as any }, {
+      createUser.mutate({ data }, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
           setIsDialogOpen(false);
@@ -159,6 +148,22 @@ export default function Users() {
         onError: () => toast({ variant: 'destructive', title: 'Erro ao excluir usuário' })
       });
     }
+  };
+
+  const handleResetPassword = () => {
+    if (!userToReset) return;
+
+    resetUserPassword.mutate({ id: userToReset.id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListUsersQueryKey() });
+        setUserToReset(null);
+        toast({
+          title: 'Senha resetada com sucesso',
+          description: `Senha provisória: ${INITIAL_PASSWORD}`,
+        });
+      },
+      onError: () => toast({ variant: 'destructive', title: 'Erro ao resetar senha' }),
+    });
   };
 
   const filteredUsers = users?.filter(u => 
@@ -199,7 +204,7 @@ export default function Users() {
           <Table className="table-fixed">
             <TableHeader>
               <TableRow className="bg-slate-50 hover:bg-slate-50">
-                <TableHead className="w-[7%]">ID</TableHead><TableHead className="w-[18%]">Nome</TableHead><TableHead className="w-[20%]">Login</TableHead><TableHead className="w-[17%]">Perfil</TableHead><TableHead className="w-[12%]">Status</TableHead><TableHead className="w-[14%]">Criado em</TableHead><TableHead className="w-[12%] text-right">Ações</TableHead>
+                <TableHead className="w-[6%]">ID</TableHead><TableHead className="w-[17%]">Nome</TableHead><TableHead className="w-[16%]">Login</TableHead><TableHead className="w-[14%]">Perfil</TableHead><TableHead className="w-[10%]">Status</TableHead><TableHead className="w-[12%]">Criado em</TableHead><TableHead className="w-[25%] text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -225,6 +230,9 @@ export default function Users() {
                     <TableCell className="whitespace-nowrap text-right space-x-1">
                       <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => openEditDialog(user)}>
                         <Edit className="h-4 w-4" />Editar
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => setUserToReset(user)}>
+                        <KeyRound className="h-4 w-4" />Resetar senha
                       </Button>
                       <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:bg-red-50 hover:text-red-600" title="Excluir usuário" onClick={() => setUserToDelete(user)}>
                         <Trash2 className="h-4 w-4" />
@@ -260,13 +268,11 @@ export default function Users() {
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="password" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha {editingUser && <span className="text-gray-400 font-normal">(deixe em branco para manter a atual)</span>}</FormLabel>
-                  <FormControl><Input {...field} type="password" placeholder="***" /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              {!editingUser && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  Senha inicial: <strong className="text-[#012c61]">{INITIAL_PASSWORD}</strong>. O usuário deverá alterá-la no primeiro acesso.
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem>
@@ -348,6 +354,15 @@ export default function Users() {
           </Form>
         </DialogContent>
       </Dialog>
+      <ConfirmDialog
+        open={!!userToReset}
+        onOpenChange={(open) => !open && setUserToReset(null)}
+        title="Resetar senha?"
+        description={`A senha de ${userToReset?.name ?? ''} será redefinida para ${INITIAL_PASSWORD}. O usuário deverá alterá-la no próximo acesso.`}
+        confirmLabel="Resetar senha"
+        isPending={resetUserPassword.isPending}
+        onConfirm={handleResetPassword}
+      />
       <ConfirmDialog
         open={!!userToDelete}
         onOpenChange={(open) => !open && setUserToDelete(null)}

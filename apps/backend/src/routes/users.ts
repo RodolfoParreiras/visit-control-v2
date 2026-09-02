@@ -18,13 +18,10 @@ import { parseIntParam } from "../lib/parse";
 type AuthReq = Request & { user: typeof usersTable.$inferSelect };
 
 const router: IRouter = Router();
+const INITIAL_PASSWORD = "Mudar@123!";
 
-const CreateUserRequest = CreateUserBody.extend({
-  password: CreateUserBody.shape.password.min(8),
-});
-const UpdateUserRequest = UpdateUserBody.extend({
-  password: UpdateUserBody.shape.password.unwrap().min(8).optional(),
-});
+const CreateUserRequest = CreateUserBody;
+const UpdateUserRequest = UpdateUserBody;
 
 function safeUser(u: typeof usersTable.$inferSelect) {
   const { passwordHash: _ph, ...rest } = u;
@@ -81,11 +78,11 @@ router.post(
   requireAdmin,
   validate("body", CreateUserRequest),
   async (req: Request, res: Response): Promise<void> => {
-    const { name, login, password, role, status, sectorId, permissions } = req.body ?? {};
-    if (!name || !login || !password || !role) {
+    const { name, login, role, status, sectorId, permissions } = req.body ?? {};
+    if (!name || !login || !role) {
       res
         .status(400)
-        .json({ error: "Campos obrigatórios: nome, login, senha, perfil" });
+        .json({ error: "Campos obrigatórios: nome, login, perfil" });
       return;
     }
     if (role === "attendant" && !sectorId) {
@@ -102,7 +99,7 @@ router.post(
       return;
     }
 
-    const passwordHash = await bcrypt.hash(String(password), 10);
+    const passwordHash = await bcrypt.hash(INITIAL_PASSWORD, 10);
     const [user] = await db
       .insert(usersTable)
       .values({
@@ -174,16 +171,12 @@ router.patch(
       return;
     }
 
-    const { name, login, password, role, status, sectorId, permissions } = req.body ?? {};
+    const { name, login, role, status, sectorId, permissions } = req.body ?? {};
     const updates: Partial<typeof usersTable.$inferInsert> = {
       updatedAt: new Date(),
     };
     if (name) updates.name = String(name);
     if (login) updates.login = String(login);
-    if (password) {
-      updates.passwordHash = await bcrypt.hash(String(password), 10);
-      updates.mustChangePassword = true;
-    }
     if (role && ["admin", "receptionist", "attendant"].includes(role)) {
       if (role === "attendant" && !(sectorId ?? existing.sectorId)) {
         res.status(400).json({ error: "Setor é obrigatório para o perfil atendente" });
@@ -206,8 +199,6 @@ router.patch(
       .where(eq(usersTable.id, id))
       .returning();
 
-    const { password: _password, ...auditedChanges } = req.body ?? {};
-
     await auditAction({
       userId: (req as AuthReq).user.id,
       action: "update_user",
@@ -215,10 +206,58 @@ router.patch(
       entityType: "user",
       entityId: id,
       previousData: safeUser(existing),
-      newData: auditedChanges,
+      newData: req.body ?? {},
     });
 
     res.json(safeUser(updated));
+  },
+);
+
+router.post(
+  "/users/:id/reset-password",
+  requireAuth,
+  requireAdmin,
+  validate("params", UpdateUserParams),
+  async (req: Request, res: Response): Promise<void> => {
+    const id = parseIntParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "ID inválido" });
+      return;
+    }
+
+    const [existing] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.id, id));
+    if (!existing) {
+      res.status(404).json({ error: "Usuário não encontrado" });
+      return;
+    }
+
+    const passwordHash = await bcrypt.hash(INITIAL_PASSWORD, 10);
+    await db
+      .update(usersTable)
+      .set({
+        passwordHash,
+        mustChangePassword: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(usersTable.id, id));
+
+    await auditAction({
+      userId: (req as AuthReq).user.id,
+      action: "reset_user_password",
+      ipAddress: req.ip,
+      entityType: "user",
+      entityId: id,
+      previousData: { mustChangePassword: existing.mustChangePassword },
+      newData: { mustChangePassword: true },
+    });
+
+    res.json({
+      success: true,
+      message: "Senha redefinida. O usuário deverá alterá-la no próximo acesso.",
+    });
   },
 );
 

@@ -828,6 +828,56 @@ export const useUpdateUser = <TError = ErrorType<unknown>,
       return useMutation(getUpdateUserMutationOptions(options));
     }
 
+export const getResetUserPasswordUrl = (id: number,) => {
+  return `/api/users/${id}/reset-password`
+}
+
+/**
+ * @summary Reset user password to the initial password
+ */
+export const resetUserPassword = async (id: number, options?: RequestInit): Promise<SuccessResponse> => {
+  return customFetch<SuccessResponse>(getResetUserPasswordUrl(id),
+  {
+    ...options,
+    method: 'POST'
+  }
+);}
+
+export const getResetUserPasswordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetUserPassword>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resetUserPassword>>, TError,{id: number}, TContext> => {
+  const mutationKey = ['resetUserPassword'];
+  const {mutation: mutationOptions, request: requestOptions} = options ?
+    options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+    options
+    : {...options, mutation: {...options.mutation, mutationKey}}
+    : {mutation: { mutationKey, }, request: undefined};
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof resetUserPassword>>, {id: number}> = (props) => {
+    const {id} = props ?? {};
+    return resetUserPassword(id, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type ResetUserPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetUserPassword>>>
+export type ResetUserPasswordMutationError = ErrorType<unknown>
+
+/**
+ * @summary Reset user password to the initial password
+ */
+export const useResetUserPassword = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resetUserPassword>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationResult<
+    Awaited<ReturnType<typeof resetUserPassword>>,
+    TError,
+    {id: number},
+    TContext
+  > => {
+  return useMutation(getResetUserPasswordMutationOptions(options));
+}
+
 export const getDeleteUserUrl = (id: number,) => {
 
 

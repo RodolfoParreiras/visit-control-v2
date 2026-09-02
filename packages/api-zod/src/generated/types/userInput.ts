@@ -12,8 +12,6 @@ import type { UserPermissions } from './userPermissions';
 export interface UserInput {
   name: string;
   login: string;
-  /** @minLength 8 */
-  password: string;
   role: UserInputRole;
   /** @nullable */
   sectorId?: number | null;
