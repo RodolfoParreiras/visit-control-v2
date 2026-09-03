@@ -1,6 +1,6 @@
 {
   "name": "@visit-control/desktop",
-  "version": "1.0.3",
+  "version": "1.0.5",
   "description": "Aplicativo desktop do Sistema de Controle de Visitantes",
   "private": true,
   "main": "src/main.cjs",

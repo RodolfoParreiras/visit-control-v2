@@ -24,7 +24,7 @@ import {
 } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 import { isValidCpf, stripCpfMask } from "../lib/cpf";
-import { publishServiceQueueUpdate } from "../lib/service-events";
+import { publishServiceQueueEntry, publishServiceQueueUpdate } from "../lib/service-events";
 
 type AuthReq = Request & { user: typeof usersTable.$inferSelect };
 
@@ -605,11 +605,17 @@ router.post(
       .from(sectorsTable)
       .where(eq(sectorsTable.id, visit.sectorId));
     if (destinationSector?.queueEnabled) {
-      await db.insert(serviceQueueTable).values({
-        visitId: visit.id,
+      const [queueEntry] = await db
+        .insert(serviceQueueTable)
+        .values({
+          visitId: visit.id,
+          sectorId: visit.sectorId,
+        })
+        .returning({ id: serviceQueueTable.id });
+      publishServiceQueueEntry({
+        queueId: queueEntry.id,
         sectorId: visit.sectorId,
       });
-      publishServiceQueueUpdate();
     }
 
     await auditAction({

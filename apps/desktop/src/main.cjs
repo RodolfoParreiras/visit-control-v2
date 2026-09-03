@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, Menu, Notification, dialog, ipcMain, shell } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -74,7 +74,13 @@ function createWindow() {
     title: 'Controle de Visitantes',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     backgroundColor: '#f1f5f9', autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true }
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      backgroundThrottling: false,
+    }
   });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);
@@ -111,6 +117,25 @@ ipcMain.handle('save-server-url', async (_event, value) => {
   return { ok: true };
 });
 ipcMain.handle('retry-connection', loadSystem);
-app.whenReady().then(createWindow);
+ipcMain.on('notify-queue-entry', () => {
+  if (!Notification.isSupported()) return;
+
+  const notification = new Notification({
+    title: 'Novo visitante na fila',
+    body: 'Há um novo visitante aguardando atendimento.',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
+  });
+  notification.on('click', () => {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+  notification.show();
+});
+
+app.whenReady().then(() => {
+  app.setAppUserModelId('br.gov.paraibadosul.visitcontrol');
+  createWindow();
+});
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 app.on('activate', () => { if (!BrowserWindow.getAllWindows().length) createWindow(); });
