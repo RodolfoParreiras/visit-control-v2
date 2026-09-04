@@ -18,6 +18,10 @@ export type CompleteAndCallNextResult = {
   calledNext: boolean;
   queueId: number | null;
 };
+export type CompleteResult = {
+  success: boolean;
+  exitRegistered: boolean;
+};
 
 async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
@@ -34,7 +38,7 @@ export const serviceApi = {
   central: (sectorId?: number) => api<CentralData>(`/service/central${sectorId ? `?sectorId=${sectorId}` : ''}`),
   callNext: (data: { sectorId?: number; deskId?: number | null }) => api<{ success: boolean; queueId: number }>('/service/call-next', { method: 'POST', body: JSON.stringify(data) }),
   recall: (id: number, sectorId?: number) => api<{ success: boolean }>(`/service/queue/${id}/recall${sectorId ? `?sectorId=${sectorId}` : ''}`, { method: 'POST' }),
-  complete: (id: number, sectorId?: number) => api<{ success: boolean }>(`/service/queue/${id}/complete${sectorId ? `?sectorId=${sectorId}` : ''}`, { method: 'POST' }),
+  complete: (id: number, sectorId?: number) => api<CompleteResult>(`/service/queue/${id}/complete${sectorId ? `?sectorId=${sectorId}` : ''}`, { method: 'POST' }),
   completeAndCallNext: (id: number, data: { sectorId?: number; deskId?: number | null }) =>
     api<CompleteAndCallNextResult>(`/service/queue/${id}/complete-and-call-next`, {
       method: 'POST',

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bell, CalendarDays, CheckCircle2, CircleUserRound, Headphones, RefreshCw, Users } from 'lucide-react';
+import { Bell, CalendarDays, CheckCircle2, CircleStop, CircleUserRound, Headphones, RefreshCw, Users } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,7 +22,8 @@ export default function ServiceCenter() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [deskId, setDeskId] = useState<string>('');
-  const [confirmCompleteOpen, setConfirmCompleteOpen] = useState(false);
+  const [confirmCompleteOnlyOpen, setConfirmCompleteOnlyOpen] = useState(false);
+  const [confirmCompleteAndNextOpen, setConfirmCompleteAndNextOpen] = useState(false);
   const { data, isLoading, error } = useQuery({ queryKey: centralKey, queryFn: () => serviceApi.central(), refetchInterval: 30000 });
 
   useEffect(() => {
@@ -46,12 +47,24 @@ export default function ServiceCenter() {
     onSuccess: () => toast({ title: 'Chamada repetida no visor' }),
     onError: (e: Error) => toast({ variant: 'destructive', title: e.message }),
   });
+  const completeOnly = useMutation({
+    mutationFn: (id: number) => serviceApi.complete(id),
+    onSuccess: () => {
+      setConfirmCompleteOnlyOpen(false);
+      refresh();
+      toast({
+        title: 'Atendimento finalizado e saída registrada',
+        description: 'Nenhum novo visitante foi chamado.',
+      });
+    },
+    onError: (e: Error) => toast({ variant: 'destructive', title: e.message }),
+  });
   const completeAndCallNext = useMutation({
     mutationFn: (id: number) => serviceApi.completeAndCallNext(id, {
       deskId: data?.sector.usesDesks ? Number(deskId) : null,
     }),
     onSuccess: (result) => {
-      setConfirmCompleteOpen(false);
+      setConfirmCompleteAndNextOpen(false);
       refresh();
       toast({
         title: result.calledNext
@@ -107,8 +120,9 @@ export default function ServiceCenter() {
             <CardContent className="space-y-5 p-6">
               <div><div className="break-words text-2xl font-bold text-[#012c61]">{data.current.visitorName}</div><p className="mt-1 text-slate-500">Chamado às {time(data.current.calledAt)}{data.current.deskName ? ` — ${data.current.deskName}` : ''}</p></div>
               <div className="flex flex-wrap gap-3">
-                <Button variant="outline" className="h-11 rounded-lg border-slate-200 px-5 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => recall.mutate(data.current!.id)} disabled={recall.isPending}><RefreshCw className="mr-2 h-4 w-4" />Chamar novamente</Button>
-                <Button className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]" onClick={() => setConfirmCompleteOpen(true)} disabled={completeAndCallNext.isPending || (data.sector.usesDesks && !deskId)}><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar e chamar próximo</Button>
+                <Button variant="outline" className="h-11 rounded-lg border-slate-200 px-5 text-[#012c61] hover:bg-[#174f8c]/10" onClick={() => recall.mutate(data.current!.id)} disabled={recall.isPending || completeOnly.isPending || completeAndCallNext.isPending}><RefreshCw className="mr-2 h-4 w-4" />Chamar novamente</Button>
+                <Button variant="outline" className="h-11 rounded-lg border-[#012c61]/25 bg-white px-5 font-semibold text-[#012c61] hover:bg-slate-100" onClick={() => setConfirmCompleteOnlyOpen(true)} disabled={completeOnly.isPending || completeAndCallNext.isPending}><CircleStop className="mr-2 h-4 w-4" />Finalizar atendimento</Button>
+                <Button className="h-11 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]" onClick={() => setConfirmCompleteAndNextOpen(true)} disabled={completeOnly.isPending || completeAndCallNext.isPending || (data.sector.usesDesks && !deskId)}><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar e chamar próximo</Button>
               </div>
             </CardContent>
           </Card>
@@ -130,8 +144,18 @@ export default function ServiceCenter() {
         </Card>
 
         <ConfirmDialog
-          open={confirmCompleteOpen}
-          onOpenChange={setConfirmCompleteOpen}
+          open={confirmCompleteOnlyOpen}
+          onOpenChange={setConfirmCompleteOnlyOpen}
+          title="Finalizar atendimento?"
+          description={`O atendimento de ${data.current?.visitorName ?? 'visitante atual'} será encerrado e a saída será registrada para a recepção. Nenhum novo visitante será chamado.`}
+          confirmLabel="Finalizar atendimento"
+          isPending={completeOnly.isPending}
+          onConfirm={() => data.current && completeOnly.mutate(data.current.id)}
+        />
+
+        <ConfirmDialog
+          open={confirmCompleteAndNextOpen}
+          onOpenChange={setConfirmCompleteAndNextOpen}
           title="Finalizar atendimento e chamar o próximo?"
           description={`O atendimento de ${data.current?.visitorName ?? 'visitante atual'} será encerrado, a saída será registrada para a recepção e a próxima pessoa da fila será chamada automaticamente.`}
           confirmLabel="Finalizar e chamar"

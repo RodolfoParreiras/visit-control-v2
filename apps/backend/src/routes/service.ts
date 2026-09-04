@@ -162,10 +162,58 @@ router.post("/service/queue/:id/complete", requireAuth, async (req: Request, res
   const id = Number(req.params.id);
   const sector = await ensureCentralAccess(authReq, res);
   if (!sector) return;
-  const result = await pool.query(`UPDATE service_queue SET status='completed', completed_at=NOW() WHERE id=$1 AND sector_id=$2 AND status='called' AND attendant_user_id=$3 RETURNING id`, [id, sector.id, authReq.user.id]);
-  if (!result.rowCount) { res.status(404).json({ error: "Atendimento atual não encontrado" }); return; }
+
+  const client = await pool.connect();
+  let exitRegistered = false;
+  try {
+    await client.query("BEGIN");
+    const current = await client.query(`
+      SELECT q.id, q.visit_id AS "visitId"
+      FROM service_queue q
+      JOIN visits v ON v.id = q.visit_id
+      WHERE q.id = $1 AND q.sector_id = $2 AND q.status = 'called' AND q.attendant_user_id = $3
+      FOR UPDATE OF q, v
+    `, [id, sector.id, authReq.user.id]);
+
+    if (!current.rowCount) {
+      await client.query("ROLLBACK");
+      res.status(404).json({ error: "Atendimento atual não encontrado" });
+      return;
+    }
+
+    const visitId = Number(current.rows[0].visitId);
+    await client.query(
+      "UPDATE service_queue SET status='completed', completed_at=NOW() WHERE id=$1",
+      [id],
+    );
+    const visitResult = await client.query(`
+      UPDATE visits
+      SET status='finished',
+          exit_date=TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD'),
+          exit_time=TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo', 'HH24:MI'),
+          exit_user_id=$2
+      WHERE id=$1 AND status='ongoing'
+      RETURNING id
+    `, [visitId, authReq.user.id]);
+    exitRegistered = Boolean(visitResult.rowCount);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+
   publishServiceQueueUpdate();
-  res.json({ success: true });
+  await auditAction({
+    userId: authReq.user.id,
+    action: "complete_service",
+    ipAddress: req.ip,
+    entityType: "service_queue",
+    entityId: id,
+    newData: { sectorId: sector.id, exitRegistered },
+  });
+  res.json({ success: true, exitRegistered });
 });
 
 router.post("/service/queue/:id/complete-and-call-next", requireAuth, async (req: Request, res: Response): Promise<void> => {
