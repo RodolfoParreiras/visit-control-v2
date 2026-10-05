@@ -9,6 +9,8 @@
 export interface VisitorInput {
   name: string;
   cpf: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  birthDate: string;
   phone?: string;
   company?: string;
   city?: string;

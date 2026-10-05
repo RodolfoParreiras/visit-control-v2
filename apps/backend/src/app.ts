@@ -1,11 +1,12 @@
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 import cors from "cors";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import compression from "compression";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { verifyToken } from "./lib/jwt";
 
 const app: Express = express();
 // DESABILITA ETag para APIs autenticadas
@@ -52,10 +53,30 @@ app.use(
 app.use(compression());
 
 // ── Rate limiting (global) ─────────────────────────────────────────────────
+// O limite é contado por usuário autenticado. Contar por IP fazia todos os
+// computadores dividirem o mesmo limite quando o servidor não enxerga o IP real
+// do cliente (ex.: Docker Desktop, onde todos chegam como o gateway do Docker).
+function rateLimitKey(req: Request): string {
+  const header = req.headers.authorization;
+  if (header?.startsWith("Bearer ")) {
+    try {
+      return `user:${verifyToken(header.slice(7)).id}`;
+    } catch {
+      // Token inválido: cai no limite por IP.
+    }
+  }
+  return `ip:${ipKeyGenerator(req.ip ?? "")}`;
+}
+
 export const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 1500,
-  skip: (req) => req.path === "/api/health" || req.path === "/api/healthz" || req.path === "/api/service/display/events",
+  keyGenerator: rateLimitKey,
+  skip: (req) =>
+    req.path === "/api/health" ||
+    req.path === "/api/healthz" ||
+    req.path === "/api/service/display" ||
+    req.path === "/api/service/display/events",
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Muitas requisições. Tente novamente em alguns minutos." },

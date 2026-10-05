@@ -1,6 +1,10 @@
 export type ServiceDesk = { id: number; name: string; active: boolean; createdAt?: string };
-export type QueuePerson = { id: number; visitorName: string; queuedAt: string };
-export type CurrentService = { id: number; visitorName: string; calledAt: string; deskId: number | null; deskName: string | null };
+export type QueueType = 'priority' | 'normal';
+export type QueuePerson = { id: number; visitorName: string; queuedAt: string; priorityLevel: number; priorityReason: string | null };
+export type CurrentService = {
+  id: number; visitorName: string; calledAt: string; deskId: number | null; deskName: string | null;
+  priorityLevel: number; priorityReason: string | null;
+};
 export type CentralData = {
   sector: { id: number; name: string; usesDesks: boolean };
   desks: ServiceDesk[];
@@ -36,10 +40,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const serviceApi = {
   central: (sectorId?: number) => api<CentralData>(`/service/central${sectorId ? `?sectorId=${sectorId}` : ''}`),
-  callNext: (data: { sectorId?: number; deskId?: number | null }) => api<{ success: boolean; queueId: number }>('/service/call-next', { method: 'POST', body: JSON.stringify(data) }),
+  callNext: (data: { sectorId?: number; deskId?: number | null; queue: QueueType }) => api<{ success: boolean; queueId: number }>('/service/call-next', { method: 'POST', body: JSON.stringify(data) }),
   recall: (id: number, sectorId?: number) => api<{ success: boolean }>(`/service/queue/${id}/recall${sectorId ? `?sectorId=${sectorId}` : ''}`, { method: 'POST' }),
   complete: (id: number, sectorId?: number) => api<CompleteResult>(`/service/queue/${id}/complete${sectorId ? `?sectorId=${sectorId}` : ''}`, { method: 'POST' }),
-  completeAndCallNext: (id: number, data: { sectorId?: number; deskId?: number | null }) =>
+  completeAndCallNext: (id: number, data: { sectorId?: number; deskId?: number | null; queue: QueueType }) =>
     api<CompleteAndCallNextResult>(`/service/queue/${id}/complete-and-call-next`, {
       method: 'POST',
       body: JSON.stringify(data),

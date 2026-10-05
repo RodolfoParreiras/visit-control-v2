@@ -41,11 +41,27 @@ export const UserStatus = {
 } as const;
 
 export interface UserPermissions {
+  viewDashboard: boolean;
+  viewDashboardCharts: boolean;
+  viewVisits: boolean;
+  registerVisit: boolean;
+  checkoutVisit: boolean;
+  editVisit: boolean;
+  cancelVisit: boolean;
+  reprintLabel: boolean;
+  viewVisitors: boolean;
+  createVisitor: boolean;
   editVisitorName: boolean;
   editVisitorCpf: boolean;
+  editVisitorBirthDate: boolean;
   editVisitorPhone: boolean;
   editVisitorCompany: boolean;
   editVisitorCity: boolean;
+  accessServiceCenter: boolean;
+  viewReports: boolean;
+  manageSectors: boolean;
+  manageSettings: boolean;
+  viewAudit: boolean;
 }
 
 export interface User {
@@ -191,6 +207,11 @@ export interface Visitor {
   company?: string | null;
   /** @nullable */
   city?: string | null;
+  /**
+     * Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.
+     * @nullable
+     */
+  birthDate?: string | null;
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
@@ -199,6 +220,8 @@ export interface Visitor {
 export interface VisitorInput {
   name: string;
   cpf: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  birthDate: string;
   phone?: string;
   company?: string;
   city?: string;
@@ -207,6 +230,8 @@ export interface VisitorInput {
 export interface VisitorUpdate {
   name?: string;
   cpf?: string;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  birthDate?: string;
   phone?: string;
   company?: string;
   city?: string;
@@ -216,10 +241,41 @@ export type VisitStatus = typeof VisitStatus[keyof typeof VisitStatus];
 
 
 export const VisitStatus = {
+  waiting: 'waiting',
   ongoing: 'ongoing',
   finished: 'finished',
   cancelled: 'cancelled',
 } as const;
+
+export type VisitServiceStatus = typeof VisitServiceStatus[keyof typeof VisitServiceStatus];
+
+
+export const VisitServiceStatus = {
+  waiting: 'waiting',
+  called: 'called',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+/**
+ * Situação da visita na fila da Central de Atendimento.
+ */
+export interface VisitService {
+  status: VisitServiceStatus;
+  queuedAt: string;
+  /** @nullable */
+  calledAt?: string | null;
+  /** @nullable */
+  completedAt?: string | null;
+  /** 0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+). */
+  priorityLevel: number;
+  /** @nullable */
+  priorityReason?: string | null;
+  /** @nullable */
+  deskName?: string | null;
+  /** @nullable */
+  attendantName?: string | null;
+}
 
 export interface Visit {
   id: number;
@@ -247,6 +303,12 @@ export interface Visit {
   exitUser?: User;
   /** @nullable */
   cancelReason?: string | null;
+  /**
+     * Motivo de prioridade informado pela recepção.
+     * @nullable
+     */
+  priorityReason?: string | null;
+  service?: VisitService | null;
   createdAt: string;
 }
 
@@ -260,6 +322,8 @@ export interface VisitorWithHistory {
   company?: string | null;
   /** @nullable */
   city?: string | null;
+  /** @nullable */
+  birthDate?: string | null;
   createdAt: string;
   /** @nullable */
   updatedAt?: string | null;
@@ -273,6 +337,21 @@ export interface VisitorListResponse {
   limit: number;
 }
 
+/**
+ * @nullable
+ */
+export type VisitInputPriorityReason = typeof VisitInputPriorityReason[keyof typeof VisitInputPriorityReason] | null;
+
+
+export const VisitInputPriorityReason = {
+  pregnant: 'pregnant',
+  lactating: 'lactating',
+  infant: 'infant',
+  disabled: 'disabled',
+  autism: 'autism',
+  obese: 'obese',
+} as const;
+
 export type VisitInput = (unknown & {
   /** @nullable */
   visitorId?: number | null;
@@ -281,11 +360,18 @@ export type VisitInput = (unknown & {
   visitorPhone?: string;
   visitorCompany?: string;
   visitorCity?: string;
+  /**
+     * Obrigatória para novos visitantes e para cadastros antigos sem data.
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  visitorBirthDate?: string;
   updateVisitorData?: boolean;
   sectorId: number;
   responsible?: string;
   reason?: string;
   notes?: string;
+  /** @nullable */
+  priorityReason?: VisitInputPriorityReason;
 });
 
 export interface VisitUpdate {
@@ -542,6 +628,7 @@ export type ListVisitsStatus = typeof ListVisitsStatus[keyof typeof ListVisitsSt
 
 
 export const ListVisitsStatus = {
+  waiting: 'waiting',
   ongoing: 'ongoing',
   finished: 'finished',
   cancelled: 'cancelled',
@@ -569,6 +656,7 @@ export type GetVisitsReportStatus = typeof GetVisitsReportStatus[keyof typeof Ge
 
 
 export const GetVisitsReportStatus = {
+  waiting: 'waiting',
   ongoing: 'ongoing',
   finished: 'finished',
   cancelled: 'cancelled',

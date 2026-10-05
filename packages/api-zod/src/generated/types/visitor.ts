@@ -16,6 +16,11 @@ export interface Visitor {
   company?: string | null;
   /** @nullable */
   city?: string | null;
+  /**
+     * Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.
+     * @nullable
+     */
+  birthDate?: string | null;
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;

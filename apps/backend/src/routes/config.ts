@@ -5,7 +5,7 @@ import {
   labelConfigTable,
   usersTable,
 } from "@visit-control/db";
-import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { auditAction } from "../lib/audit";
 import {
   UpdateFieldConfigBody,
@@ -44,7 +44,7 @@ router.get(
 router.put(
   "/config/fields",
   requireAuth,
-  requireAdmin,
+  requirePermission("manageSettings"),
   validate("body", UpdateFieldConfigBody),
   async (req: Request, res: Response): Promise<void> => {
     const { phone, company, city, responsible, reason, notes } = req.body ?? {};
@@ -125,7 +125,7 @@ router.get(
 router.put(
   "/config/label",
   requireAuth,
-  requireAdmin,
+  requirePermission("manageSettings"),
   validate("body", UpdateLabelConfigBody),
   async (req: Request, res: Response): Promise<void> => {
     const body = req.body ?? {};

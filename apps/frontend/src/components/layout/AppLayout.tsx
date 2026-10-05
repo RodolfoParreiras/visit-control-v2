@@ -1,57 +1,46 @@
-import { ReactNode, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { ReactNode, useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { Sidebar } from './Sidebar';
-import { useAuth } from '@/contexts/AuthContext';
 
-type QueueEntryEvent = {
-  queueId: number;
-  sectorId: number;
-};
-
-type DesktopBridge = {
-  notifyQueueEntry?: () => void;
-};
-
+// As atualizações em tempo real ficam no RealtimeProvider, montado uma única vez
+// no App: aqui a conexão era recriada a cada troca de tela.
 export function AppLayout({ children }: { children: ReactNode }) {
-  const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const [location] = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const events = new EventSource('/api/service/display/events');
-    events.addEventListener('update', () => {
-      queryClient.invalidateQueries({ refetchType: 'active' });
-    });
-    events.addEventListener('queue-entry', async (event) => {
-      if (user?.role !== 'attendant') return;
-
-      try {
-        const entry = JSON.parse(event.data) as QueueEntryEvent;
-        if (user.sectorId !== entry.sectorId) return;
-
-        const desktopApp = (window as Window & { desktopApp?: DesktopBridge }).desktopApp;
-        if (desktopApp?.notifyQueueEntry) {
-          desktopApp.notifyQueueEntry();
-        } else if ('Notification' in window && window.Notification.permission === 'granted') {
-          const notification = new window.Notification('Novo visitante na fila', {
-            body: 'Há um novo visitante aguardando atendimento.',
-            icon: '/icone-prefeitura.png?v=20260902',
-            tag: `queue-entry-${entry.queueId}`,
-          });
-          notification.onclick = () => window.focus();
-        }
-      } catch {
-        // Ignora eventos incompletos sem interromper as atualizações em tempo real.
-      }
-    });
-    return () => events.close();
-  }, [queryClient, user?.role, user?.sectorId]);
+  // Fecha a gaveta do menu ao trocar de tela.
+  useEffect(() => setMenuOpen(false), [location]);
 
   return (
     <div className="flex min-h-[100dvh] w-full bg-background no-print">
-      <Sidebar />
+      <div className="hidden lg:block">
+        <Sidebar />
+      </div>
       <main className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Em telas menores o menu lateral vira uma gaveta aberta por este cabeçalho. */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-white/10 bg-sidebar px-4 text-white shadow-sm lg:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 text-white hover:bg-white/10 hover:text-white"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+          <span className="truncate text-sm font-semibold">Controle de Visitantes</span>
+        </header>
         {children}
       </main>
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent side="left" className="w-64 max-w-[85vw] border-0 p-0 sm:max-w-[85vw] [&>button]:text-white">
+          <SheetTitle className="sr-only">Menu</SheetTitle>
+          <Sidebar />
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

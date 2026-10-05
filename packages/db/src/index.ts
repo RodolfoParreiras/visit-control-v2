@@ -15,4 +15,5 @@ export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 export const runMigrations = (): Promise<void> => applyMigrations(pool);
 
+export type { PoolClient } from "pg";
 export * from "./schema";

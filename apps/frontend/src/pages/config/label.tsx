@@ -279,11 +279,11 @@ export default function ConfigLabel() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         {/* Header */}
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <Tag className="h-8 w-8" />
               Configuração da Etiqueta
             </h1>
@@ -291,7 +291,7 @@ export default function ConfigLabel() {
               Personalize o layout, dimensões e elementos da etiqueta de visitante.
             </p>
           </div>
-          <div className="flex flex-col items-end">
+          <div className="flex flex-col items-start sm:items-end">
             <div className="hidden text-right text-sm text-slate-500 sm:block">
               <div className="flex items-center justify-end gap-2 font-semibold text-slate-600"><span>Olá, {user?.name}</span><CircleUserRound className="h-5 w-5" /></div>
               <div className="mt-2 flex items-center justify-end gap-2"><span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span><CalendarDays className="h-5 w-5" /></div>

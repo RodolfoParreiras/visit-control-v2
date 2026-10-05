@@ -10,6 +10,7 @@ export type GetVisitsReportStatus = typeof GetVisitsReportStatus[keyof typeof Ge
 
 
 export const GetVisitsReportStatus = {
+  waiting: 'waiting',
   ongoing: 'ongoing',
   finished: 'finished',
   cancelled: 'cancelled',

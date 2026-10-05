@@ -6,12 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type ListVisitsStatus = typeof ListVisitsStatus[keyof typeof ListVisitsStatus];
+export type VisitServiceStatus = typeof VisitServiceStatus[keyof typeof VisitServiceStatus];
 
 
-export const ListVisitsStatus = {
+export const VisitServiceStatus = {
   waiting: 'waiting',
-  ongoing: 'ongoing',
-  finished: 'finished',
+  called: 'called',
+  completed: 'completed',
   cancelled: 'cancelled',
 } as const;

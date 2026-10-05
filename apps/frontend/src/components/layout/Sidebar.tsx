@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { can, canUseServiceCenter } from "@/lib/permissions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 
@@ -24,6 +25,7 @@ const navClass =
 
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [location] = useLocation();
   const active = (path: string) =>
     location === path || location.startsWith(`${path}/`);
@@ -76,48 +78,55 @@ export function Sidebar() {
       </div>
 
       <nav className="sidebar-scrollbar flex-1 space-y-1.5 overflow-y-auto px-3 py-5">
-        {user?.role === "attendant" ? (
-          item("/service-center", "Central de Atendimento", Headphones)
-        ) : (
-          <>
-            {item("/dashboard", "Dashboard", LayoutDashboard)}
-            {item("/visits", "Visitas", ClipboardList)}
-            {item("/visitors", "Visitantes", Users)}
-            {item("/reports", "Relatórios", FileBarChart)}
-            <a
-              href="/call-display"
-              target="_blank"
-              rel="noreferrer"
-              className={cn(
-                navClass,
-                "text-sidebar-foreground/85 hover:bg-sidebar-accent/55 hover:text-white",
-              )}
-            >
-              <Monitor className="h-[18px] w-[18px]" />
-              <span>Visor de Chamadas</span>
-            </a>
-            {user?.role === "admin" && (
-              <>
-                <div className="pt-4 pb-2 px-3">
-                  <span className="text-xs font-semibold text-sidebar-foreground/50 tracking-wider">
-                    ADMINISTRATIVO
-                  </span>
-                </div>
-                {item("/sectors", "Setores", Building2)}
-                {item("/users", "Usuários", UserCog)}
-                <div className="pt-2 pb-1 px-3">
-                  <span className="text-[10px] font-semibold text-sidebar-foreground/40 tracking-wider uppercase">
-                    Configurações
-                  </span>
-                </div>
-                {item("/config/fields", "Campos do Formulário", Settings)}
-                {item("/config/label", "Etiqueta de Visita", Tag)}
-                {item("/backup", "Backup do Sistema", DatabaseBackup)}
-                {item("/audit", "Auditoria", Shield)}
-              </>
+        {can(user, "viewDashboard") &&
+          item("/dashboard", "Dashboard", LayoutDashboard)}
+        {can(user, "viewVisits")
+          ? item("/visits", "Visitas", ClipboardList)
+          : can(user, "registerVisit") &&
+            item("/visits/new", "Nova Visita", ClipboardList)}
+        {can(user, "viewVisitors") && item("/visitors", "Visitantes", Users)}
+        {canUseServiceCenter(user) &&
+          item("/service-center", "Central de Atendimento", Headphones)}
+        {can(user, "viewReports") &&
+          item("/reports", "Relatórios", FileBarChart)}
+        {can(user, "viewVisits", "registerVisit") && (
+          <a
+            href="/call-display"
+            target="_blank"
+            rel="noreferrer"
+            className={cn(
+              navClass,
+              "text-sidebar-foreground/85 hover:bg-sidebar-accent/55 hover:text-white",
             )}
+          >
+            <Monitor className="h-[18px] w-[18px]" />
+            <span>Visor de Chamadas</span>
+          </a>
+        )}
+        {(isAdmin || can(user, "manageSectors", "viewAudit")) && (
+          <div className="pt-4 pb-2 px-3">
+            <span className="text-xs font-semibold text-sidebar-foreground/50 tracking-wider">
+              ADMINISTRATIVO
+            </span>
+          </div>
+        )}
+        {can(user, "manageSectors") && item("/sectors", "Setores", Building2)}
+        {isAdmin && item("/users", "Usuários", UserCog)}
+        {(isAdmin || can(user, "manageSettings")) && (
+          <div className="pt-2 pb-1 px-3">
+            <span className="text-[10px] font-semibold text-sidebar-foreground/40 tracking-wider uppercase">
+              Configurações
+            </span>
+          </div>
+        )}
+        {can(user, "manageSettings") && (
+          <>
+            {item("/config/fields", "Campos do Formulário", Settings)}
+            {item("/config/label", "Etiqueta de Visita", Tag)}
           </>
         )}
+        {isAdmin && item("/backup", "Backup do Sistema", DatabaseBackup)}
+        {can(user, "viewAudit") && item("/audit", "Auditoria", Shield)}
       </nav>
 
       <div className="border-t border-white/10 bg-black/5 p-4">

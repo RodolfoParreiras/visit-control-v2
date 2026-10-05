@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, auditLogsTable, usersTable } from "@visit-control/db";
 import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { ListAuditLogsQueryParams } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 
@@ -10,7 +10,7 @@ const router: IRouter = Router();
 router.get(
   "/audit",
   requireAuth,
-  requireAdmin,
+  requirePermission("viewAudit"),
   validate("query", ListAuditLogsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const {

@@ -5,6 +5,7 @@
  * API specification for Sistema de Controle de Visitantes
  * OpenAPI spec version: 0.1.0
  */
+import type { VisitInputPriorityReason } from './visitInputPriorityReason';
 
 export type VisitInput = (unknown & {
   /** @nullable */
@@ -14,9 +15,16 @@ export type VisitInput = (unknown & {
   visitorPhone?: string;
   visitorCompany?: string;
   visitorCity?: string;
+  /**
+     * Obrigatória para novos visitantes e para cadastros antigos sem data.
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  visitorBirthDate?: string;
   updateVisitorData?: boolean;
   sectorId: number;
   responsible?: string;
   reason?: string;
   notes?: string;
+  /** @nullable */
+  priorityReason?: VisitInputPriorityReason;
 });

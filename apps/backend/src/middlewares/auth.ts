@@ -3,9 +3,10 @@ import {
   type Response,
   type NextFunction,
 } from "express";
-import { db, usersTable } from "@visit-control/db";
+import { db, usersTable, type PermissionKey } from "@visit-control/db";
 import { eq } from "drizzle-orm";
 import { verifyToken } from "../lib/jwt";
+import { hasPermission } from "../lib/permissions";
 
 export async function requireAuth(
   req: Request,
@@ -45,16 +46,19 @@ export async function requireAuth(
     return;
   }
 
-  if (
-    user.role === "attendant" &&
-    !req.path.startsWith("/service/") &&
-    !allowedWhileChangingPassword.includes(req.path)
-  ) {
-    res.status(403).json({ error: "O perfil atendente possui acesso somente à Central de Atendimento" });
-    return;
-  }
-
   next();
+}
+
+/** Exige ao menos uma das permissões informadas (administradores sempre passam). */
+export function requirePermission(...keys: PermissionKey[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const user = (req as Request & { user?: typeof usersTable.$inferSelect }).user;
+    if (!user || !hasPermission(user, ...keys)) {
+      res.status(403).json({ error: "Você não possui permissão para esta ação" });
+      return;
+    }
+    next();
+  };
 }
 
 export function requireAdmin(

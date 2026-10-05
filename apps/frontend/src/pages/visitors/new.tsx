@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { isValidBirthDate, todayInSaoPaulo } from "@/lib/birth-date";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -39,6 +40,10 @@ export default function VisitorNew() {
         .string()
         .min(1, "CPF é obrigatório")
         .refine(isValidCpf, "CPF inválido."),
+      birthDate: z
+        .string()
+        .min(1, "Data de nascimento é obrigatória")
+        .refine(isValidBirthDate, "Data de nascimento inválida."),
       phone: z.string().optional(),
       company: z.string().optional(),
       city: z.string().optional(),
@@ -61,7 +66,7 @@ export default function VisitorNew() {
 
   const form = useForm({
     resolver: zodResolver(createSchema()),
-    defaultValues: { name: "", cpf: "", phone: "", company: "", city: "" },
+    defaultValues: { name: "", cpf: "", birthDate: "", phone: "", company: "", city: "" },
   });
 
   const handleCpfChange = useCallback(
@@ -76,6 +81,7 @@ export default function VisitorNew() {
     const payload: VisitorInput = {
       name: data.name,
       cpf: stripCpfMask(data.cpf),
+      birthDate: data.birthDate,
     };
     if (data.phone) payload.phone = data.phone;
     if (data.company) payload.company = data.company;
@@ -89,7 +95,7 @@ export default function VisitorNew() {
           setLocation(`/visits/new?visitorId=${visitor.id}`);
         },
         onError: (err: any) => {
-          const msg = err.response?.data?.error;
+          const msg = err.data?.error;
           if (err.response?.status === 409) {
             form.setError("cpf", { message: "Este CPF já está cadastrado." });
           } else {
@@ -116,10 +122,10 @@ export default function VisitorNew() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <UserPlus className="h-8 w-8" />
               Cadastrar Visitante
             </h1>
@@ -179,6 +185,26 @@ export default function VisitorNew() {
                             placeholder="000.000.000-00"
                             maxLength={14}
                             onChange={handleCpfChange(field.onChange)}
+                            className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="birthDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Nascimento *</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="date"
+                            min="1900-01-01"
+                            max={todayInSaoPaulo()}
                             className="h-11 rounded-lg border-slate-300 focus-visible:ring-[#174f8c]"
                           />
                         </FormControl>

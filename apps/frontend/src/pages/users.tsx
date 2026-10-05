@@ -8,8 +8,10 @@ import {
   useResetUserPassword,
   User,
   getListUsersQueryKey,
-  useListSectors
+  useListSectors,
+  type UserPermissions,
 } from '@visit-control/api-client';
+import { defaultPermissionsForRole, permissionGroups } from '@/lib/permissions';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
 import { CalendarDays, CircleUserRound, UserCog, Plus, Edit, Trash2, Search, KeyRound } from 'lucide-react';
@@ -31,14 +33,6 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 
-const defaultVisitorPermissions = {
-  editVisitorName: true,
-  editVisitorCpf: true,
-  editVisitorPhone: true,
-  editVisitorCompany: true,
-  editVisitorCity: true,
-};
-
 const INITIAL_PASSWORD = 'Mudar@123!';
 
 const userSchema = z.object({
@@ -47,16 +41,19 @@ const userSchema = z.object({
   role: z.enum(['admin', 'receptionist', 'attendant']),
   sectorId: z.number().int().positive().nullable().optional(),
   status: z.enum(['active', 'inactive']),
-  permissions: z.object({
-    editVisitorName: z.boolean(),
-    editVisitorCpf: z.boolean(),
-    editVisitorPhone: z.boolean(),
-    editVisitorCompany: z.boolean(),
-    editVisitorCity: z.boolean(),
-  }),
-}).refine(data => data.role !== 'attendant' || !!data.sectorId, { message: 'Setor é obrigatório para atendentes', path: ['sectorId'] });
+  permissions: z.custom<UserPermissions>((value) => typeof value === 'object' && value !== null),
+}).refine(
+  data => data.role === 'admin' || !data.permissions.accessServiceCenter || !!data.sectorId,
+  { message: 'Informe o setor de atendimento', path: ['sectorId'] },
+);
 
 type UserFormValues = z.infer<typeof userSchema>;
+
+const usesSector = (values: Pick<UserFormValues, 'role' | 'permissions'>) =>
+  values.role === 'admin' || values.permissions.accessServiceCenter;
+
+const errorMessage = (error: unknown) =>
+  (error as { data?: { error?: string } } | null)?.data?.error;
 
 export default function Users() {
   const { user: currentUser } = useAuth();
@@ -84,7 +81,7 @@ export default function Users() {
       role: 'receptionist',
       sectorId: null,
       status: 'active',
-      permissions: defaultVisitorPermissions,
+      permissions: defaultPermissionsForRole('receptionist'),
     },
   });
 
@@ -96,7 +93,7 @@ export default function Users() {
       role: 'receptionist',
       sectorId: null,
       status: 'active',
-      permissions: defaultVisitorPermissions,
+      permissions: defaultPermissionsForRole('receptionist'),
     });
     setIsDialogOpen(true);
   };
@@ -109,13 +106,13 @@ export default function Users() {
       role: user.role,
       sectorId: user.sectorId ?? null,
       status: user.status,
-      permissions: { ...defaultVisitorPermissions, ...user.permissions },
+      permissions: { ...defaultPermissionsForRole(user.role), ...user.permissions },
     });
     setIsDialogOpen(true);
   };
 
   const onSubmit = (data: UserFormValues) => {
-    if (data.role !== 'attendant') data.sectorId = null;
+    if (!usesSector(data)) data.sectorId = null;
     if (editingUser) {
       updateUser.mutate({ id: editingUser.id, data }, {
         onSuccess: () => {
@@ -123,7 +120,7 @@ export default function Users() {
           setIsDialogOpen(false);
           toast({ title: 'Usuário atualizado com sucesso' });
         },
-        onError: () => toast({ variant: 'destructive', title: 'Erro ao atualizar usuário' })
+        onError: (error) => toast({ variant: 'destructive', title: 'Erro ao atualizar usuário', description: errorMessage(error) })
       });
     } else {
       createUser.mutate({ data }, {
@@ -132,7 +129,7 @@ export default function Users() {
           setIsDialogOpen(false);
           toast({ title: 'Usuário criado com sucesso' });
         },
-        onError: () => toast({ variant: 'destructive', title: 'Erro ao criar usuário' })
+        onError: (error) => toast({ variant: 'destructive', title: 'Erro ao criar usuário', description: errorMessage(error) })
       });
     }
   };
@@ -173,10 +170,10 @@ export default function Users() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <UserCog className="h-8 w-8" />
               Usuários
             </h1>
@@ -248,7 +245,7 @@ export default function Users() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingUser ? 'Editar Usuário' : 'Novo Usuário'}</DialogTitle>
           </DialogHeader>
@@ -277,7 +274,14 @@ export default function Users() {
                 <FormField control={form.control} name="role" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Perfil</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value: UserFormValues['role']) => {
+                        field.onChange(value);
+                        // O perfil sugere um conjunto inicial de permissões, que pode ser ajustado abaixo.
+                        form.setValue('permissions', defaultPermissionsForRole(value));
+                      }}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Selecione o perfil" />
@@ -310,39 +314,56 @@ export default function Users() {
                   </FormItem>
                 )} />
               </div>
-              {form.watch('role') === 'attendant' && (
+              {usesSector({ role: form.watch('role'), permissions: form.watch('permissions') }) && (
                 <FormField control={form.control} name="sectorId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Setor de atendimento</FormLabel>
-                    <Select value={field.value ? String(field.value) : ''} onValueChange={(value) => field.onChange(Number(value))}>
+                    <FormLabel>
+                      Setor de atendimento{form.watch('role') === 'admin' ? ' (opcional)' : ''}
+                    </FormLabel>
+                    <Select
+                      value={field.value ? String(field.value) : 'none'}
+                      onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
+                    >
                       <FormControl><SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger></FormControl>
-                      <SelectContent>{sectors?.filter((sector) => sector.queueEnabled).map((sector) => <SelectItem key={sector.id} value={String(sector.id)}>{sector.name}</SelectItem>)}</SelectContent>
+                      <SelectContent>
+                        {form.watch('role') === 'admin' && <SelectItem value="none">Nenhum</SelectItem>}
+                        {sectors?.filter((sector) => sector.queueEnabled).map((sector) => <SelectItem key={sector.id} value={String(sector.id)}>{sector.name}</SelectItem>)}
+                      </SelectContent>
                     </Select>
+                    <p className="text-xs text-slate-500">Setor cuja Central de Atendimento este usuário vai operar.</p>
                     <FormMessage />
                   </FormItem>
                 )} />
               )}
-              {form.watch('role') === 'receptionist' && (
-                <div className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+              {form.watch('role') === 'admin' ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                  Administradores têm acesso a todas as funções do sistema, incluindo usuários e backup.
+                </div>
+              ) : (
+                <div className="space-y-4 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
                   <div>
-                    <h3 className="font-medium text-gray-900">Permissões de edição do visitante</h3>
-                    <p className="text-sm text-gray-500">Escolha quais informações este recepcionista poderá alterar.</p>
+                    <h3 className="font-medium text-gray-900">Permissões do usuário</h3>
+                    <p className="text-sm text-gray-500">
+                      O perfil escolhido sugere as permissões iniciais. Ajuste o que este usuário poderá fazer.
+                      Usuários e backup são exclusivos de administradores.
+                    </p>
                   </div>
-                  {([
-                    ['permissions.editVisitorName', 'Nome completo'],
-                    ['permissions.editVisitorCpf', 'CPF'],
-                    ['permissions.editVisitorPhone', 'Telefone'],
-                    ['permissions.editVisitorCompany', 'Empresa/Órgão'],
-                    ['permissions.editVisitorCity', 'Cidade'],
-                  ] as const).map(([name, label]) => (
-                    <FormField key={name} control={form.control} name={name} render={({ field }) => (
-                      <FormItem className="flex items-center justify-between gap-4 rounded-md bg-white px-3 py-2 shadow-sm">
-                        <FormLabel className="m-0 font-normal">{label}</FormLabel>
-                        <FormControl>
-                          <Switch checked={field.value} onCheckedChange={field.onChange} />
-                        </FormControl>
-                      </FormItem>
-                    )} />
+                  {permissionGroups.map((group) => (
+                    <div key={group.title} className="space-y-2">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{group.title}</h4>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {group.items.map((item) => (
+                          <FormField key={item.key} control={form.control} name={`permissions.${item.key}`} render={({ field }) => (
+                            <FormItem className="flex items-center justify-between gap-4 space-y-0 rounded-md bg-white px-3 py-2 shadow-sm">
+                              <FormLabel className="m-0 font-normal">{item.label}</FormLabel>
+                              <FormControl>
+                                <Switch checked={Boolean(field.value)} onCheckedChange={field.onChange} />
+                              </FormControl>
+                            </FormItem>
+                          )} />
+                        ))}
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}

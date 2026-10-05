@@ -1,4 +1,9 @@
 import type { Pool, PoolClient } from "pg";
+import { defaultPermissionsForRole } from "./schema/users";
+
+const adminPermissions = defaultPermissionsForRole("admin");
+const receptionistPermissions = defaultPermissionsForRole("receptionist");
+const attendantPermissions = defaultPermissionsForRole("attendant");
 
 type Migration = { id: string; sql: string };
 
@@ -126,6 +131,43 @@ const migrations: Migration[] = [
       CREATE UNIQUE INDEX IF NOT EXISTS visits_one_ongoing_per_visitor
         ON visits (visitor_id)
         WHERE status = 'ongoing';
+    `,
+  },
+  {
+    id: "007_birth_date_priority_waiting_status_permissions",
+    sql: `
+      ALTER TABLE visitors ADD COLUMN IF NOT EXISTS birth_date DATE;
+      ALTER TABLE visits
+        ADD COLUMN IF NOT EXISTS visitor_birth_date DATE,
+        ADD COLUMN IF NOT EXISTS priority_reason TEXT;
+
+      ALTER TABLE service_queue
+        ADD COLUMN IF NOT EXISTS priority_level INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS priority_reason TEXT;
+      CREATE INDEX IF NOT EXISTS service_queue_priority_order
+        ON service_queue (sector_id, status, priority_level DESC, queued_at, id);
+
+      -- Visitas na fila que ainda não foram chamadas passam a ficar "aguardando".
+      ALTER TABLE visits DROP CONSTRAINT IF EXISTS visits_status_check;
+      ALTER TABLE visits ADD CONSTRAINT visits_status_check
+        CHECK (status IN ('waiting', 'ongoing', 'finished', 'cancelled'));
+      DROP INDEX IF EXISTS visits_one_ongoing_per_visitor;
+      CREATE UNIQUE INDEX visits_one_ongoing_per_visitor
+        ON visits (visitor_id)
+        WHERE status IN ('waiting', 'ongoing');
+      UPDATE visits SET status = 'waiting'
+        FROM service_queue q
+        WHERE q.visit_id = visits.id AND q.status = 'waiting' AND visits.status = 'ongoing';
+
+      -- Permissões passam a cobrir o sistema inteiro. Recepcionistas mantêm as
+      -- permissões de edição de visitante que já tinham.
+      ALTER TABLE users ALTER COLUMN permissions SET DEFAULT '${JSON.stringify(receptionistPermissions)}'::jsonb;
+      UPDATE users SET permissions = CASE role
+        WHEN 'attendant' THEN '${JSON.stringify(attendantPermissions)}'::jsonb
+        WHEN 'admin' THEN '${JSON.stringify(adminPermissions)}'::jsonb
+        ELSE '${JSON.stringify(receptionistPermissions)}'::jsonb || permissions
+          || jsonb_build_object('editVisitorBirthDate', COALESCE((permissions->>'editVisitorName')::boolean, TRUE))
+      END;
     `,
   },
 ];

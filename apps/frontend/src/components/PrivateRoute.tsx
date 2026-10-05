@@ -1,14 +1,17 @@
 import { Redirect, useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { ReactNode } from 'react';
+import { can, homePath, type PermissionKey } from '@/lib/permissions';
 
 interface PrivateRouteProps {
   children: ReactNode;
   adminOnly?: boolean;
+  /** Basta ter uma das permissões listadas. */
+  permission?: PermissionKey | PermissionKey[];
   allowPasswordChange?: boolean;
 }
 
-export function PrivateRoute({ children, adminOnly = false, allowPasswordChange = false }: PrivateRouteProps) {
+export function PrivateRoute({ children, adminOnly = false, permission, allowPasswordChange = false }: PrivateRouteProps) {
   const { user, isLoading } = useAuth();
   const [location] = useLocation();
 
@@ -32,15 +35,16 @@ export function PrivateRoute({ children, adminOnly = false, allowPasswordChange 
   }
 
   if (!user.mustChangePassword && allowPasswordChange) {
-    return <Redirect to={user.role === 'attendant' ? '/service-center' : '/dashboard'} />;
+    return <Redirect to={homePath(user)} />;
   }
 
-  if (user.role === 'attendant' && !allowPasswordChange && location !== '/service-center') {
-    return <Redirect to="/service-center" />;
-  }
-
-  if (adminOnly && user.role !== 'admin') {
-    return <Redirect to="/dashboard" />;
+  const permissions = permission === undefined ? [] : Array.isArray(permission) ? permission : [permission];
+  const allowed =
+    (!adminOnly || user.role === 'admin') &&
+    (permissions.length === 0 || can(user, ...permissions));
+  if (!allowed) {
+    const fallback = homePath(user);
+    return fallback === location ? null : <Redirect to={fallback} />;
   }
 
   return <>{children}</>;

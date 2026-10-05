@@ -53,6 +53,15 @@ import { printVisitLabel } from "@/lib/print-label";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useQueryClient } from "@tanstack/react-query";
+import { Label } from "@/components/ui/label";
+import { can } from "@/lib/permissions";
+import {
+  agePriorityLabel,
+  formatBirthDate,
+  isValidBirthDate,
+  manualPriorityOptions,
+  todayInSaoPaulo,
+} from "@/lib/birth-date";
 
 export default function VisitNew() {
   const { user } = useAuth();
@@ -112,9 +121,19 @@ export default function VisitNew() {
       { query: { enabled: !!selectedVisitor?.id } } as any,
     );
   const ongoingVisit = (selectedVisitorDetails as any)?.visits?.find(
-    (visit: any) => visit.status === "ongoing",
+    (visit: any) => visit.status === "waiting" || visit.status === "ongoing",
   );
   const ongoingVisitId = ongoingVisit?.id ?? conflictingVisitId;
+  // Cadastros antigos não têm data de nascimento: a recepção deve informá-la
+  // nesta visita (atualização cadastral).
+  const visitorBirthDate: string | null =
+    (selectedVisitorDetails as any)?.birthDate ?? selectedVisitor?.birthDate ?? null;
+  const needsBirthDate = !!selectedVisitor && !visitorBirthDate;
+  const [birthDateUpdate, setBirthDateUpdate] = useState("");
+  const [birthDateError, setBirthDateError] = useState("");
+  const [priorityReason, setPriorityReason] = useState<string>("none");
+  const canCreateVisitor = can(user, "createVisitor");
+  const agePriority = agePriorityLabel(visitorBirthDate ?? (birthDateUpdate || null));
 
   // Visit-only schema — visitor data is separate
   const createSchema = () => {
@@ -143,6 +162,10 @@ export default function VisitNew() {
     resolver: zodResolver(createSchema()),
     defaultValues: { sectorId: "", responsible: "", reason: "", notes: "" },
   });
+  const selectedSectorId = form.watch("sectorId");
+  const selectedSectorHasQueue = !!sectors?.find(
+    (sector) => String(sector.id) === selectedSectorId,
+  )?.queueEnabled;
 
   useEffect(() => {
     if (fieldConfig) {
@@ -154,6 +177,9 @@ export default function VisitNew() {
     setSelectedVisitor(visitor);
     setConflictingVisitId(null);
     setSearchTerm("");
+    setBirthDateUpdate("");
+    setBirthDateError("");
+    setPriorityReason("none");
   };
 
   const handleReset = () => {
@@ -161,6 +187,9 @@ export default function VisitNew() {
     setSearchTerm("");
     setCreatedVisit(null);
     setConflictingVisitId(null);
+    setBirthDateUpdate("");
+    setBirthDateError("");
+    setPriorityReason("none");
     form.reset({ sectorId: "", responsible: "", reason: "", notes: "" });
     setLocation("/visits/new");
   };
@@ -188,10 +217,24 @@ export default function VisitNew() {
       return;
     }
 
+    if (needsBirthDate) {
+      if (!birthDateUpdate) {
+        setBirthDateError("Informe a data de nascimento para continuar.");
+        return;
+      }
+      if (!isValidBirthDate(birthDateUpdate)) {
+        setBirthDateError("Data de nascimento inválida.");
+        return;
+      }
+    }
+
     const payload: any = {
       visitorId: selectedVisitor.id,
       sectorId: parseInt(data.sectorId, 10),
+      priorityReason:
+        selectedSectorHasQueue && priorityReason !== "none" ? priorityReason : null,
     };
+    if (needsBirthDate) payload.visitorBirthDate = birthDateUpdate;
     if (fieldConfig?.responsible !== "hidden")
       payload.responsible = data.responsible;
     if (fieldConfig?.reason !== "hidden") payload.reason = data.reason;
@@ -227,10 +270,13 @@ export default function VisitNew() {
           toast({ title: "Visita registrada com sucesso!" });
         },
         onError: (err: any) => {
-          const responseData = err.response?.data;
+          const responseData = err.data;
           const msg = responseData?.error;
           if (responseData?.code === "VISITOR_HAS_ONGOING_VISIT") {
             setConflictingVisitId(responseData.visitId);
+          }
+          if (responseData?.code === "VISITOR_BIRTH_DATE_REQUIRED") {
+            setBirthDateError(msg);
           }
           toast({
             variant: "destructive",
@@ -255,7 +301,7 @@ export default function VisitNew() {
   const pageHeader = (
     <div className="flex items-start justify-between gap-6">
       <div>
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+        <h1 className="page-title">
           <UserPlus className="h-8 w-8" />
           Nova Visita
         </h1>
@@ -282,7 +328,7 @@ export default function VisitNew() {
   if (createdVisit && labelConfig) {
     return (
       <AppLayout>
-        <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+        <div className="page-container">
           {pageHeader}
           <div className="no-print">
             <Card className="border-slate-200 bg-white shadow-sm">
@@ -356,7 +402,7 @@ export default function VisitNew() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         {pageHeader}
 
         {/* Step 1 — Visitor search */}
@@ -412,18 +458,20 @@ export default function VisitNew() {
                           </Button>
                         </div>
                       ))}
-                      <div className="border-t bg-slate-50 p-3 text-center">
-                        <span className="text-sm text-gray-600 mr-2">
-                          Não é nenhum destes?
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setLocation("/visitors/new")}
-                        >
-                          Cadastrar novo
-                        </Button>
-                      </div>
+                      {canCreateVisitor && (
+                        <div className="border-t bg-slate-50 p-3 text-center">
+                          <span className="text-sm text-gray-600 mr-2">
+                            Não é nenhum destes?
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setLocation("/visitors/new")}
+                          >
+                            Cadastrar novo
+                          </Button>
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="p-6 text-center space-y-3">
@@ -431,12 +479,14 @@ export default function VisitNew() {
                       <p className="text-gray-600">
                         Visitante não encontrado no sistema.
                       </p>
-                      <Button
-                        className="bg-[#012c61] hover:bg-[#01244f]"
-                        onClick={() => setLocation("/visitors/new")}
-                      >
-                        Cadastrar Novo Visitante
-                      </Button>
+                      {canCreateVisitor && (
+                        <Button
+                          className="bg-[#012c61] hover:bg-[#01244f]"
+                          onClick={() => setLocation("/visitors/new")}
+                        >
+                          Cadastrar Novo Visitante
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -485,6 +535,16 @@ export default function VisitNew() {
                         {maskCpf(selectedVisitor.cpf)}
                       </p>
                     </div>
+                    {visitorBirthDate && (
+                      <div>
+                        <span className="text-gray-500 text-xs uppercase tracking-wide">
+                          Data de nascimento
+                        </span>
+                        <p className="text-gray-800 mt-0.5">
+                          {formatBirthDate(visitorBirthDate)}
+                        </p>
+                      </div>
+                    )}
                     {selectedVisitor.phone && (
                       <div>
                         <span className="text-gray-500 text-xs uppercase tracking-wide">
@@ -549,6 +609,45 @@ export default function VisitNew() {
                 </Card>
               )}
 
+              {!ongoingVisitId && needsBirthDate && !checkingOngoingVisit && (
+                <Card className="border-amber-200 bg-amber-50 shadow-sm">
+                  <CardContent className="flex flex-col gap-4 p-5 md:flex-row md:items-end md:justify-between">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                      <div>
+                        <p className="font-semibold text-amber-950">
+                          Atualização cadastral necessária
+                        </p>
+                        <p className="mt-1 text-sm text-amber-800">
+                          Este visitante foi cadastrado sem data de nascimento.
+                          Informe-a para registrar a entrada.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full space-y-1.5 md:w-56">
+                      <Label htmlFor="birth-date-update" className="text-amber-950">
+                        Data de nascimento *
+                      </Label>
+                      <Input
+                        id="birth-date-update"
+                        type="date"
+                        min="1900-01-01"
+                        max={todayInSaoPaulo()}
+                        value={birthDateUpdate}
+                        onChange={(e) => {
+                          setBirthDateUpdate(e.target.value);
+                          setBirthDateError("");
+                        }}
+                        className="h-11 rounded-lg border-amber-300 bg-white focus-visible:ring-[#174f8c]"
+                      />
+                      {birthDateError && (
+                        <p className="text-sm font-medium text-destructive">{birthDateError}</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Visit details */}
               {!ongoingVisitId && (
                 <Card className="overflow-hidden border-slate-200 shadow-sm">
@@ -595,6 +694,34 @@ export default function VisitNew() {
                           </FormItem>
                         )}
                       />
+
+                      {selectedSectorHasQueue && (
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Atendimento prioritário</Label>
+                          <div className="grid gap-3 md:grid-cols-2 md:items-center">
+                            <Select value={priorityReason} onValueChange={setPriorityReason}>
+                              <SelectTrigger className="h-11 rounded-lg border-slate-300 focus:ring-[#174f8c]">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Nenhum motivo adicional</SelectItem>
+                                {manualPriorityOptions.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-sm text-slate-500">
+                              {agePriority
+                                ? `Prioridade automática pela idade: ${agePriority}.`
+                                : priorityReason !== "none"
+                                  ? "O visitante entrará na fila prioritária."
+                                  : "O visitante entrará na fila comum."}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {fieldConfig?.responsible !== "hidden" && (
                         <FormField

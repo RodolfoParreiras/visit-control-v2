@@ -8,6 +8,7 @@
 import type { Sector } from './sector';
 import type { User } from './user';
 import type { Visitor } from './visitor';
+import type { VisitService } from './visitService';
 import type { VisitStatus } from './visitStatus';
 
 export interface Visit {
@@ -36,5 +37,11 @@ export interface Visit {
   exitUser?: User;
   /** @nullable */
   cancelReason?: string | null;
+  /**
+     * Motivo de prioridade informado pela recepção.
+     * @nullable
+     */
+  priorityReason?: string | null;
+  service?: VisitService | null;
   createdAt: Date;
 }

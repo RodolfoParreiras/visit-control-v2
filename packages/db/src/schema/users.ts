@@ -3,21 +3,90 @@ import { sectorsTable } from "./sectors";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
-export type UserPermissions = {
-  editVisitorName: boolean;
-  editVisitorCpf: boolean;
-  editVisitorPhone: boolean;
-  editVisitorCompany: boolean;
-  editVisitorCity: boolean;
+// Permissões atribuídas individualmente a cada usuário. Administradores têm
+// acesso total; a gestão de usuários e o backup continuam exclusivos deles.
+export const permissionKeys = [
+  "viewDashboard",
+  "viewDashboardCharts",
+  "viewVisits",
+  "registerVisit",
+  "checkoutVisit",
+  "editVisit",
+  "cancelVisit",
+  "reprintLabel",
+  "viewVisitors",
+  "createVisitor",
+  "editVisitorName",
+  "editVisitorCpf",
+  "editVisitorBirthDate",
+  "editVisitorPhone",
+  "editVisitorCompany",
+  "editVisitorCity",
+  "accessServiceCenter",
+  "viewReports",
+  "manageSectors",
+  "manageSettings",
+  "viewAudit",
+] as const;
+
+export type PermissionKey = (typeof permissionKeys)[number];
+export type UserPermissions = Record<PermissionKey, boolean>;
+export type UserRole = "admin" | "receptionist" | "attendant";
+
+const noPermissions = Object.fromEntries(
+  permissionKeys.map((key) => [key, false]),
+) as UserPermissions;
+
+const roleDefaultPermissions: Record<UserRole, UserPermissions> = {
+  admin: Object.fromEntries(
+    permissionKeys.map((key) => [key, true]),
+  ) as UserPermissions,
+  receptionist: {
+    ...noPermissions,
+    viewDashboard: true,
+    viewVisits: true,
+    registerVisit: true,
+    checkoutVisit: true,
+    reprintLabel: true,
+    viewVisitors: true,
+    createVisitor: true,
+    editVisitorName: true,
+    editVisitorCpf: true,
+    editVisitorBirthDate: true,
+    editVisitorPhone: true,
+    editVisitorCompany: true,
+    editVisitorCity: true,
+    viewReports: true,
+  },
+  attendant: { ...noPermissions, accessServiceCenter: true },
 };
 
-export const defaultUserPermissions: UserPermissions = {
-  editVisitorName: true,
-  editVisitorCpf: true,
-  editVisitorPhone: true,
-  editVisitorCompany: true,
-  editVisitorCity: true,
-};
+/** Permissões sugeridas ao criar um usuário com o perfil informado. */
+export function defaultPermissionsForRole(role: UserRole): UserPermissions {
+  return { ...roleDefaultPermissions[role] };
+}
+
+/**
+ * Completa as permissões salvas com os padrões do perfil, ignorando chaves
+ * desconhecidas. Administradores sempre recebem todas as permissões.
+ */
+export function resolvePermissions(
+  role: UserRole,
+  value: unknown,
+  base: UserPermissions = defaultPermissionsForRole(role),
+): UserPermissions {
+  if (role === "admin") return defaultPermissionsForRole("admin");
+  const input =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return Object.fromEntries(
+    permissionKeys.map((key) => [
+      key,
+      typeof input[key] === "boolean" ? input[key] : base[key],
+    ]),
+  ) as UserPermissions;
+}
+
+export const defaultUserPermissions = defaultPermissionsForRole("receptionist");
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),

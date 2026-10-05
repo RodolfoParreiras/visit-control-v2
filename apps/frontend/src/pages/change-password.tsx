@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { KeyRound, Loader2 } from 'lucide-react';
 import { changePassword } from '@visit-control/api-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { homePath } from '@/lib/permissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +35,7 @@ export default function ChangePassword() {
       const user = await changePassword({ currentPassword, newPassword });
       updateUser(user);
       toast({ title: 'Senha alterada com sucesso' });
-      navigate('/dashboard');
+      navigate(homePath(user));
     } catch (error) {
       toast({
         variant: 'destructive',

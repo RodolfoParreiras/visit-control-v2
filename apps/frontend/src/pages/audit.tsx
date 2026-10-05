@@ -45,9 +45,9 @@ export default function AuditLogs() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
-          <div><h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]"><Shield className="h-8 w-8" />Auditoria</h1><p className="mt-1 text-slate-500">Registro de todas as ações realizadas no sistema.</p></div>
+          <div><h1 className="page-title"><Shield className="h-8 w-8" />Auditoria</h1><p className="mt-1 text-slate-500">Registro de todas as ações realizadas no sistema.</p></div>
           <div className="hidden text-right text-sm text-slate-500 sm:block"><div className="flex items-center justify-end gap-2 font-semibold text-slate-600"><span>Olá, {user?.name}</span><CircleUserRound className="h-5 w-5" /></div><div className="mt-2 flex items-center justify-end gap-2"><span>{format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}</span><CalendarDays className="h-5 w-5" /></div></div>
         </div>
 

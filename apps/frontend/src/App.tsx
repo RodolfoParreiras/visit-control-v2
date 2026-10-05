@@ -3,6 +3,7 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { RealtimeProvider } from "@/contexts/RealtimeProvider";
 import { PrivateRoute } from "@/components/PrivateRoute";
 
 import Login from "@/pages/login";
@@ -22,6 +23,7 @@ import ConfigLabel from "@/pages/config/label";
 import Reports from "@/pages/reports";
 import AuditLogs from "@/pages/audit";
 import NotFound from "@/pages/not-found";
+import NoAccess from "@/pages/no-access";
 import ServiceCenter from "@/pages/service-center";
 import CallDisplay from "@/pages/call-display";
 import Backup from "@/pages/backup";
@@ -52,55 +54,55 @@ function Router() {
       </Route>
 
       <Route path="/dashboard">
-        <PrivateRoute>
+        <PrivateRoute permission="viewDashboard">
           <Dashboard />
         </PrivateRoute>
       </Route>
 
       <Route path="/service-center">
-        <PrivateRoute>
+        <PrivateRoute permission="accessServiceCenter">
           <ServiceCenter />
         </PrivateRoute>
       </Route>
 
       <Route path="/visits/new">
-        <PrivateRoute>
+        <PrivateRoute permission="registerVisit">
           <VisitNew />
         </PrivateRoute>
       </Route>
 
       <Route path="/visits/:id">
-        <PrivateRoute>
+        <PrivateRoute permission={["viewVisits", "registerVisit"]}>
           <VisitDetail />
         </PrivateRoute>
       </Route>
 
       <Route path="/visits">
-        <PrivateRoute>
+        <PrivateRoute permission="viewVisits">
           <Visits />
         </PrivateRoute>
       </Route>
 
       <Route path="/visitors/new">
-        <PrivateRoute>
+        <PrivateRoute permission="createVisitor">
           <VisitorNew />
         </PrivateRoute>
       </Route>
 
       <Route path="/visitors/:id">
-        <PrivateRoute>
+        <PrivateRoute permission="viewVisitors">
           <VisitorDetail />
         </PrivateRoute>
       </Route>
 
       <Route path="/visitors">
-        <PrivateRoute>
+        <PrivateRoute permission="viewVisitors">
           <Visitors />
         </PrivateRoute>
       </Route>
 
       <Route path="/sectors">
-        <PrivateRoute adminOnly>
+        <PrivateRoute permission="manageSectors">
           <Sectors />
         </PrivateRoute>
       </Route>
@@ -112,25 +114,25 @@ function Router() {
       </Route>
 
       <Route path="/config/fields">
-        <PrivateRoute adminOnly>
+        <PrivateRoute permission="manageSettings">
           <ConfigFields />
         </PrivateRoute>
       </Route>
 
       <Route path="/config/label">
-        <PrivateRoute adminOnly>
+        <PrivateRoute permission="manageSettings">
           <ConfigLabel />
         </PrivateRoute>
       </Route>
 
       <Route path="/reports">
-        <PrivateRoute>
+        <PrivateRoute permission="viewReports">
           <Reports />
         </PrivateRoute>
       </Route>
 
       <Route path="/audit">
-        <PrivateRoute adminOnly>
+        <PrivateRoute permission="viewAudit">
           <AuditLogs />
         </PrivateRoute>
       </Route>
@@ -138,6 +140,12 @@ function Router() {
       <Route path="/backup">
         <PrivateRoute adminOnly>
           <Backup />
+        </PrivateRoute>
+      </Route>
+
+      <Route path="/no-access">
+        <PrivateRoute>
+          <NoAccess />
         </PrivateRoute>
       </Route>
 
@@ -151,12 +159,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <WouterRouter base="">
-            <Router />
-          </WouterRouter>
-          <Toaster />
-        </TooltipProvider>
+        <RealtimeProvider>
+          <TooltipProvider>
+            <WouterRouter base="">
+              <Router />
+            </WouterRouter>
+            <Toaster />
+          </TooltipProvider>
+        </RealtimeProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

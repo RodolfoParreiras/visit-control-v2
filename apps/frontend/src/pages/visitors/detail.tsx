@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import {
   ArrowLeft,
   Building2,
+  Cake,
   CalendarDays,
   CircleUserRound,
   IdCard,
@@ -45,33 +46,32 @@ import { ptBR } from "date-fns/locale";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { formatDateOnly } from "@/lib/utils";
+import { can } from "@/lib/permissions";
+import {
+  formatBirthDate,
+  isValidBirthDate,
+  todayInSaoPaulo,
+} from "@/lib/birth-date";
 
-const defaultVisitorPermissions = {
-  editVisitorName: true,
-  editVisitorCpf: true,
-  editVisitorPhone: true,
-  editVisitorCompany: true,
-  editVisitorCity: true,
-};
+const visitorFieldPermissions = [
+  "editVisitorName",
+  "editVisitorCpf",
+  "editVisitorBirthDate",
+  "editVisitorPhone",
+  "editVisitorCompany",
+  "editVisitorCity",
+] as const;
 
-type VisitorPermission = keyof typeof defaultVisitorPermissions;
+type VisitorPermission = (typeof visitorFieldPermissions)[number];
 
 export default function VisitorDetail() {
   const { id } = useParams<{ id: string }>();
   const visitorId = parseInt(id, 10);
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
-  const visitorPermissions = {
-    ...defaultVisitorPermissions,
-    ...user?.permissions,
-  };
-  const canEditField = (permission: VisitorPermission) =>
-    isAdmin ||
-    (user?.role === "receptionist" && visitorPermissions[permission]);
-  const canEditVisitor =
-    isAdmin ||
-    (user?.role === "receptionist" &&
-      Object.values(visitorPermissions).some(Boolean));
+  const canEditField = (permission: VisitorPermission) => can(user, permission);
+  const canEditVisitor = can(user, ...visitorFieldPermissions);
+  const [birthDateError, setBirthDateError] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -89,9 +89,11 @@ export default function VisitorDetail() {
   const handleEditOpen = () => {
     if (visitor) {
       setCpfError("");
+      setBirthDateError("");
       setEditForm({
         name: visitor.name,
         cpf: maskCpf(visitor.cpf || ""),
+        birthDate: visitor.birthDate || "",
         phone: visitor.phone || "",
         company: visitor.company || "",
         city: visitor.city || "",
@@ -118,6 +120,14 @@ export default function VisitorDetail() {
       }
       data.cpf = rawCpf;
     }
+    if (canEditField("editVisitorBirthDate") && editForm.birthDate) {
+      if (!isValidBirthDate(editForm.birthDate)) {
+        setBirthDateError("Data de nascimento inválida.");
+        return;
+      }
+      data.birthDate = editForm.birthDate;
+    }
+    setBirthDateError("");
     if (canEditField("editVisitorPhone")) data.phone = editForm.phone;
     if (canEditField("editVisitorCompany")) data.company = editForm.company;
     if (canEditField("editVisitorCity")) data.city = editForm.city;
@@ -133,7 +143,7 @@ export default function VisitorDetail() {
           toast({ title: "Visitante atualizado com sucesso" });
         },
         onError: (err: any) => {
-          const msg = err.response?.data?.error;
+          const msg = err.data?.error;
           if (err.response?.status === 409) {
             setCpfError(msg ?? "Já existe um visitante com este CPF.");
           } else {
@@ -170,10 +180,10 @@ export default function VisitorDetail() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <UserRound className="h-8 w-8" />
               Perfil do Visitante
             </h1>
@@ -223,6 +233,16 @@ export default function VisitorDetail() {
                 <div className="min-w-0">
                   <p className="text-sm text-slate-500">CPF</p>
                   <p className="mt-1 break-words font-medium text-slate-800">{visitor.cpf ? maskCpf(visitor.cpf) : "Não informado"}</p>
+                </div>
+              </div>
+              <div className="flex gap-3 py-5">
+                <Cake className="mt-0.5 h-5 w-5 shrink-0 text-slate-500" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-500">Data de nascimento</p>
+                  <p className="mt-1 break-words font-medium text-slate-800">{formatBirthDate(visitor.birthDate)}</p>
+                  {!visitor.birthDate && (
+                    <p className="mt-1 text-xs text-amber-700">Será solicitada na próxima visita.</p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-3 py-5">
@@ -313,7 +333,7 @@ export default function VisitorDetail() {
           <div className="space-y-4 py-4">
             {!isAdmin && (
               <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                Os campos desabilitados só podem ser alterados por um administrador.
+                Os campos desabilitados não estão liberados para o seu usuário.
               </p>
             )}
             <div className="space-y-2">
@@ -345,6 +365,25 @@ export default function VisitorDetail() {
                 )}
               </div>
               <div className="space-y-2">
+                <Label>Data de nascimento</Label>
+                <Input
+                  type="date"
+                  min="1900-01-01"
+                  max={todayInSaoPaulo()}
+                  value={editForm.birthDate || ""}
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, birthDate: e.target.value });
+                    if (birthDateError) setBirthDateError("");
+                  }}
+                  disabled={!canEditField("editVisitorBirthDate")}
+                />
+                {birthDateError && (
+                  <p className="text-sm text-destructive">{birthDateError}</p>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label>Telefone</Label>
                 <Input
                   value={editForm.phone || ""}
@@ -352,6 +391,16 @@ export default function VisitorDetail() {
                     setEditForm({ ...editForm, phone: e.target.value })
                   }
                   disabled={!canEditField("editVisitorPhone")}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Cidade</Label>
+                <Input
+                  value={editForm.city || ""}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, city: e.target.value })
+                  }
+                  disabled={!canEditField("editVisitorCity")}
                 />
               </div>
             </div>
@@ -363,16 +412,6 @@ export default function VisitorDetail() {
                   setEditForm({ ...editForm, company: e.target.value })
                 }
                 disabled={!canEditField("editVisitorCompany")}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Cidade</Label>
-              <Input
-                value={editForm.city || ""}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, city: e.target.value })
-                }
-                disabled={!canEditField("editVisitorCity")}
               />
             </div>
           </div>

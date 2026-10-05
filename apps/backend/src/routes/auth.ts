@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import bcrypt from "bcryptjs";
 import { db, usersTable } from "@visit-control/db";
 import { eq } from "drizzle-orm";
@@ -8,6 +8,7 @@ import { auditAction } from "../lib/audit";
 import { requireAuth } from "../middlewares/auth";
 import { LoginBody } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
+import { publicUser } from "../lib/permissions";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,10 @@ const loginLimiter = rateLimit({
     error: "Muitas tentativas de login. Aguarde 15 minutos e tente novamente.",
   },
   skipSuccessfulRequests: true, // só conta falhas
+  // Conta por IP + login: com todos os computadores chegando pelo mesmo IP,
+  // erros de senha de uma pessoa não podem bloquear o login das outras.
+  keyGenerator: (req) =>
+    `${ipKeyGenerator(req.ip ?? "")}:${String(req.body?.login ?? "").trim().toLowerCase()}`,
 });
 
 router.post(
@@ -61,15 +66,7 @@ router.post(
       entityId: user.id,
     });
 
-    const { passwordHash: _ph, ...safeUser } = user;
-    res.json({
-      token,
-      user: {
-        ...safeUser,
-        updatedAt: user.updatedAt?.toISOString() ?? null,
-        createdAt: user.createdAt.toISOString(),
-      },
-    });
+    res.json({ token, user: publicUser(user) });
   },
 );
 
@@ -155,12 +152,7 @@ router.post(
       entityId: user.id,
     });
 
-    const { passwordHash: _ph, ...safeUser } = updated;
-    res.json({
-      ...safeUser,
-      updatedAt: updated.updatedAt?.toISOString() ?? null,
-      createdAt: updated.createdAt.toISOString(),
-    });
+    res.json(publicUser(updated));
   },
 );
 
@@ -170,12 +162,7 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const user = (req as Request & { user: typeof usersTable.$inferSelect })
       .user;
-    const { passwordHash: _ph, ...safeUser } = user;
-    res.json({
-      ...safeUser,
-      updatedAt: user.updatedAt?.toISOString() ?? null,
-      createdAt: user.createdAt.toISOString(),
-    });
+    res.json(publicUser(user));
   },
 );
 

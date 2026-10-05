@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { StatusBadge } from '@/components/StatusBadge';
+import { StatusBadge, visitStatusLabels } from '@/components/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatDateOnly } from '@/lib/utils';
 import { utils, writeFile } from 'xlsx';
@@ -64,7 +64,7 @@ export default function Reports() {
       Empresa: v.visitor?.company || '',
       Setor: v.sector?.name,
       Responsavel: v.responsible || '',
-      Status: v.status === 'ongoing' ? 'Em andamento' : v.status === 'finished' ? 'Finalizado' : 'Cancelado',
+      Status: visitStatusLabels[v.status] ?? v.status,
       Motivo: v.reason || '',
       RegistradoPor: v.entryUser?.name || ''
     }));
@@ -95,7 +95,7 @@ export default function Reports() {
       v.visitor?.name || '',
       v.visitor?.cpf || '-',
       v.sector?.name || '',
-      v.status === 'ongoing' ? 'Em andamento' : v.status === 'finished' ? 'Finalizado' : 'Cancelado'
+      visitStatusLabels[v.status] ?? v.status
     ]);
 
     autoTable(doc, {
@@ -112,10 +112,10 @@ export default function Reports() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <FileBarChart className="h-8 w-8" />
               Relatórios
             </h1>
@@ -171,6 +171,7 @@ export default function Reports() {
                   <SelectTrigger className="h-11 rounded-lg border-slate-300 bg-white focus:ring-[#174f8c]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos os Status</SelectItem>
+                    <SelectItem value="waiting">Aguardando atendimento</SelectItem>
                     <SelectItem value="ongoing">Em andamento</SelectItem>
                     <SelectItem value="finished">Finalizado</SelectItem>
                     <SelectItem value="cancelled">Cancelado</SelectItem>

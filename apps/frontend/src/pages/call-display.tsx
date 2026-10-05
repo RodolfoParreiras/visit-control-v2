@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Clock3, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { serviceApi, type DisplayCall } from '@/lib/service-api';
+import { useServiceEvents } from '@/lib/realtime';
 
 const displayKey = ['service-display'];
 const label = (call: DisplayCall) => call.deskName ?? 'Chamada geral';
@@ -15,10 +16,14 @@ export default function CallDisplay() {
 
   useEffect(() => {
     const clock = window.setInterval(() => setNow(new Date()), 1000);
-    const events = new EventSource('/api/service/display/events');
-    events.addEventListener('call', () => refetch());
-    return () => { clearInterval(clock); events.close(); };
-  }, [refetch]);
+    return () => clearInterval(clock);
+  }, []);
+
+  // O visor fica aberto o dia todo: a conexão se recupera sozinha de quedas.
+  useServiceEvents({
+    onEvent: (event) => { if (event === 'call') void refetch(); },
+    onResync: () => void refetch(),
+  });
 
   useEffect(() => {
     const call = data?.current;

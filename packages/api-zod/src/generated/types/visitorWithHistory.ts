@@ -17,6 +17,8 @@ export interface VisitorWithHistory {
   company?: string | null;
   /** @nullable */
   city?: string | null;
+  /** @nullable */
+  birthDate?: string | null;
   createdAt: Date;
   /** @nullable */
   updatedAt?: Date | null;

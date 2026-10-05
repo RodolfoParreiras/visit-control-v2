@@ -6,9 +6,16 @@ import {
   sectorsTable,
   usersTable,
   serviceQueueTable,
+  serviceDesksTable,
 } from "@visit-control/db";
-import { eq, ilike, and, desc, sql, gte, lte, or, type SQL } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { eq, ilike, and, desc, sql, gte, lte, inArray, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { requireAuth, requirePermission } from "../middlewares/auth";
+import {
+  computePriority,
+  isManualPriorityReason,
+  isValidBirthDate,
+} from "../lib/priority";
 import { auditAction } from "../lib/audit";
 import { parseIntParam } from "../lib/parse";
 import {
@@ -27,8 +34,49 @@ import { isValidCpf, stripCpfMask } from "../lib/cpf";
 import { publishServiceQueueEntry, publishServiceQueueUpdate } from "../lib/service-events";
 
 type AuthReq = Request & { user: typeof usersTable.$inferSelect };
+type VisitStatus = (typeof visitsTable.$inferSelect)["status"];
 
 const router: IRouter = Router();
+const visitStatuses: VisitStatus[] = ["waiting", "ongoing", "finished", "cancelled"];
+const openVisitStatuses: VisitStatus[] = ["waiting", "ongoing"];
+const attendantUser = alias(usersTable, "attendant_user");
+
+// Situação do visitante na Central de Atendimento, exibida para a recepção.
+const serviceFields = {
+  status: serviceQueueTable.status,
+  queuedAt: serviceQueueTable.queuedAt,
+  calledAt: serviceQueueTable.calledAt,
+  completedAt: serviceQueueTable.completedAt,
+  priorityLevel: serviceQueueTable.priorityLevel,
+  priorityReason: serviceQueueTable.priorityReason,
+  deskName: serviceDesksTable.name,
+  attendantName: attendantUser.name,
+};
+
+type ServiceRow = {
+  status: string | null;
+  queuedAt: Date | null;
+  calledAt: Date | null;
+  completedAt: Date | null;
+  priorityLevel: number | null;
+  priorityReason: string | null;
+  deskName: string | null;
+  attendantName: string | null;
+};
+
+function formatService(service: ServiceRow | null) {
+  if (!service?.status || !service.queuedAt) return null;
+  return {
+    status: service.status,
+    queuedAt: service.queuedAt.toISOString(),
+    calledAt: service.calledAt?.toISOString() ?? null,
+    completedAt: service.completedAt?.toISOString() ?? null,
+    priorityLevel: service.priorityLevel ?? 0,
+    priorityReason: service.priorityReason,
+    deskName: service.deskName,
+    attendantName: service.attendantName,
+  };
+}
 
 function nowDate() {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -77,7 +125,7 @@ async function getOngoingVisit(visitorId: number) {
     .where(
       and(
         eq(visitsTable.visitorId, visitorId),
-        eq(visitsTable.status, "ongoing"),
+        inArray(visitsTable.status, openVisitStatuses),
       ),
     )
     .limit(1);
@@ -134,8 +182,10 @@ async function getFullVisit(id: number) {
       exitTime: visitsTable.exitTime,
       exitUserId: visitsTable.exitUserId,
       cancelReason: visitsTable.cancelReason,
+      priorityReason: visitsTable.priorityReason,
       createdAt: visitsTable.createdAt,
       visitorSnapshot: {
+        birthDate: visitsTable.visitorBirthDate,
         name: visitsTable.visitorName,
         cpf: visitsTable.visitorCpf,
         phone: visitsTable.visitorPhone,
@@ -149,9 +199,11 @@ async function getFullVisit(id: number) {
         phone: visitorsTable.phone,
         company: visitorsTable.company,
         city: visitorsTable.city,
+        birthDate: visitorsTable.birthDate,
         createdAt: visitorsTable.createdAt,
         updatedAt: visitorsTable.updatedAt,
       },
+      service: serviceFields,
       sector: {
         id: sectorsTable.id,
         name: sectorsTable.name,
@@ -164,6 +216,9 @@ async function getFullVisit(id: number) {
     .from(visitsTable)
     .leftJoin(visitorsTable, eq(visitsTable.visitorId, visitorsTable.id))
     .leftJoin(sectorsTable, eq(visitsTable.sectorId, sectorsTable.id))
+    .leftJoin(serviceQueueTable, eq(serviceQueueTable.visitId, visitsTable.id))
+    .leftJoin(serviceDesksTable, eq(serviceDesksTable.id, serviceQueueTable.deskId))
+    .leftJoin(attendantUser, eq(attendantUser.id, serviceQueueTable.attendantUserId))
     .where(eq(visitsTable.id, id));
 
   if (!rows[0]) return null;
@@ -213,6 +268,7 @@ async function getFullVisit(id: number) {
   return {
     ...row,
     createdAt: row.createdAt.toISOString(),
+    service: formatService(row.service),
     visitor: row.visitor
       ? {
           ...row.visitor,
@@ -226,6 +282,7 @@ async function getFullVisit(id: number) {
             ? row.visitorSnapshot.company
             : row.visitor.company,
           city: hasSnapshot ? row.visitorSnapshot.city : row.visitor.city,
+          birthDate: row.visitorSnapshot.birthDate ?? row.visitor.birthDate,
           createdAt: row.visitor.createdAt.toISOString(),
           updatedAt: row.visitor.updatedAt?.toISOString() ?? null,
         }
@@ -247,6 +304,7 @@ async function getFullVisit(id: number) {
 router.get(
   "/visits",
   requireAuth,
+  requirePermission("viewVisits"),
   validate("query", ListVisitsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const {
@@ -281,10 +339,8 @@ router.get(
     const conditions: SQL[] = [];
     if (sectorId)
       conditions.push(eq(visitsTable.sectorId, parseInt(sectorId, 10)));
-    if (status && ["ongoing", "finished", "cancelled"].includes(status)) {
-      conditions.push(
-        eq(visitsTable.status, status as "ongoing" | "finished" | "cancelled"),
-      );
+    if (status && visitStatuses.includes(status as VisitStatus)) {
+      conditions.push(eq(visitsTable.status, status as VisitStatus));
     }
     conditions.push(gte(visitsTable.entryDate, dateFrom));
     conditions.push(lte(visitsTable.entryDate, dateTo));
@@ -325,8 +381,10 @@ router.get(
         exitTime: visitsTable.exitTime,
         exitUserId: visitsTable.exitUserId,
         cancelReason: visitsTable.cancelReason,
+        priorityReason: visitsTable.priorityReason,
         createdAt: visitsTable.createdAt,
         visitorSnapshot: {
+          birthDate: visitsTable.visitorBirthDate,
           name: visitsTable.visitorName,
           cpf: visitsTable.visitorCpf,
           phone: visitsTable.visitorPhone,
@@ -340,9 +398,11 @@ router.get(
           phone: visitorsTable.phone,
           company: visitorsTable.company,
           city: visitorsTable.city,
+          birthDate: visitorsTable.birthDate,
           createdAt: visitorsTable.createdAt,
           updatedAt: visitorsTable.updatedAt,
         },
+        service: serviceFields,
         sector: {
           id: sectorsTable.id,
           name: sectorsTable.name,
@@ -355,6 +415,9 @@ router.get(
       .from(visitsTable)
       .leftJoin(visitorsTable, eq(visitsTable.visitorId, visitorsTable.id))
       .leftJoin(sectorsTable, eq(visitsTable.sectorId, sectorsTable.id))
+      .leftJoin(serviceQueueTable, eq(serviceQueueTable.visitId, visitsTable.id))
+      .leftJoin(serviceDesksTable, eq(serviceDesksTable.id, serviceQueueTable.deskId))
+      .leftJoin(attendantUser, eq(attendantUser.id, serviceQueueTable.attendantUserId))
       .where(
         search
           ? and(
@@ -377,6 +440,7 @@ router.get(
         return {
           ...r,
           createdAt: r.createdAt.toISOString(),
+          service: formatService(r.service),
           visitor: r.visitor
             ? {
                 ...r.visitor,
@@ -385,6 +449,7 @@ router.get(
                 phone: hasSnap ? snap.phone : r.visitor.phone,
                 company: hasSnap ? snap.company : r.visitor.company,
                 city: hasSnap ? snap.city : r.visitor.city,
+                birthDate: snap.birthDate ?? r.visitor.birthDate,
                 createdAt: r.visitor.createdAt.toISOString(),
                 updatedAt: r.visitor.updatedAt?.toISOString() ?? null,
               }
@@ -404,6 +469,7 @@ router.get(
 router.post(
   "/visits",
   requireAuth,
+  requirePermission("registerVisit"),
   validate("body", CreateVisitBody),
   async (req: Request, res: Response): Promise<void> => {
     const caller = (req as AuthReq).user;
@@ -414,15 +480,35 @@ router.post(
       visitorPhone,
       visitorCompany,
       visitorCity,
+      visitorBirthDate,
       updateVisitorData,
       sectorId,
       responsible,
       reason,
       notes,
+      priorityReason: rawPriorityReason,
     } = req.body ?? {};
 
     if (!sectorId) {
       res.status(400).json({ error: "Setor é obrigatório" });
+      return;
+    }
+    const [destinationSector] = await db
+      .select({ id: sectorsTable.id, queueEnabled: sectorsTable.queueEnabled })
+      .from(sectorsTable)
+      .where(eq(sectorsTable.id, parseInt(String(sectorId), 10)));
+    if (!destinationSector) {
+      res.status(400).json({ error: "Setor não encontrado" });
+      return;
+    }
+
+    const priorityReason = rawPriorityReason ? rawPriorityReason : null;
+    if (priorityReason !== null && !isManualPriorityReason(priorityReason)) {
+      res.status(400).json({ error: "Motivo de prioridade inválido" });
+      return;
+    }
+    if (visitorBirthDate && !isValidBirthDate(visitorBirthDate, nowDate())) {
+      res.status(400).json({ error: "Data de nascimento inválida" });
       return;
     }
 
@@ -444,6 +530,7 @@ router.post(
       phone: string | null;
       company: string | null;
       city: string | null;
+      birthDate: string | null;
     };
 
     if (visitorId) {
@@ -462,6 +549,31 @@ router.post(
       if (ongoingVisit) {
         sendOngoingVisitConflict(res, ongoingVisit);
         return;
+      }
+
+      // Cadastros antigos não têm data de nascimento: a atualização cadastral
+      // é exigida na próxima visita.
+      if (!existing.birthDate) {
+        if (!visitorBirthDate) {
+          res.status(400).json({
+            error: "Informe a data de nascimento para atualizar o cadastro do visitante.",
+            code: "VISITOR_BIRTH_DATE_REQUIRED",
+          });
+          return;
+        }
+        await db
+          .update(visitorsTable)
+          .set({ birthDate: String(visitorBirthDate), updatedAt: new Date() })
+          .where(eq(visitorsTable.id, existing.id));
+        await auditAction({
+          userId: caller.id,
+          action: "update_visitor",
+          ipAddress: req.ip,
+          entityType: "visitor",
+          entityId: existing.id,
+          previousData: { birthDate: null },
+          newData: { birthDate: visitorBirthDate },
+        });
       }
 
       if (updateVisitorData) {
@@ -511,6 +623,9 @@ router.post(
                   ? String(visitorCity)
                   : null
                 : existing.city,
+            birthDate: visitorBirthDate
+              ? String(visitorBirthDate)
+              : existing.birthDate,
             updatedAt: new Date(),
           })
           .where(eq(visitorsTable.id, existing.id));
@@ -530,6 +645,10 @@ router.post(
       }
       if (!visitorCpf) {
         res.status(400).json({ error: "CPF do visitante é obrigatório" });
+        return;
+      }
+      if (!visitorBirthDate) {
+        res.status(400).json({ error: "Data de nascimento é obrigatória" });
         return;
       }
       if (visitorCpf) {
@@ -552,6 +671,7 @@ router.post(
           phone: visitorPhone ? String(visitorPhone) : null,
           company: visitorCompany ? String(visitorCompany) : null,
           city: visitorCity ? String(visitorCity) : null,
+          birthDate: String(visitorBirthDate),
         })
         .returning();
       finalVisitorId = newVisitor.id;
@@ -579,11 +699,14 @@ router.post(
           visitorPhone: visitorSnapshot.phone,
           visitorCompany: visitorSnapshot.company,
           visitorCity: visitorSnapshot.city,
-          sectorId: parseInt(String(sectorId), 10),
+          visitorBirthDate: visitorSnapshot.birthDate,
+          sectorId: destinationSector.id,
           responsible: responsible ? String(responsible) : null,
           reason: reason ? String(reason) : null,
           notes: notes ? String(notes) : null,
-          status: "ongoing",
+          priorityReason,
+          // Em setores com fila, a visita fica aguardando até ser chamada.
+          status: destinationSector.queueEnabled ? "waiting" : "ongoing",
           entryDate: nowDate(),
           entryTime: nowTime(),
           entryUserId: caller.id,
@@ -600,16 +723,19 @@ router.post(
       throw error;
     }
 
-    const [destinationSector] = await db
-      .select({ queueEnabled: sectorsTable.queueEnabled })
-      .from(sectorsTable)
-      .where(eq(sectorsTable.id, visit.sectorId));
-    if (destinationSector?.queueEnabled) {
+    if (destinationSector.queueEnabled) {
+      const priority = computePriority(
+        visitorSnapshot.birthDate,
+        priorityReason,
+        visit.entryDate,
+      );
       const [queueEntry] = await db
         .insert(serviceQueueTable)
         .values({
           visitId: visit.id,
           sectorId: visit.sectorId,
+          priorityLevel: priority.level,
+          priorityReason: priority.reason,
         })
         .returning({ id: serviceQueueTable.id });
       publishServiceQueueEntry({
@@ -635,6 +761,7 @@ router.post(
 router.get(
   "/visits/:id",
   requireAuth,
+  requirePermission("viewVisits", "registerVisit"),
   validate("params", GetVisitParams),
   async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(
@@ -653,7 +780,7 @@ router.get(
 router.patch(
   "/visits/:id",
   requireAuth,
-  requireAdmin,
+  requirePermission("editVisit"),
   validate("params", UpdateVisitParams),
   validate("body", UpdateVisitBody),
   async (req: Request, res: Response): Promise<void> => {
@@ -701,6 +828,7 @@ router.patch(
 router.post(
   "/visits/:id/checkout",
   requireAuth,
+  requirePermission("checkoutVisit"),
   validate("params", CheckoutVisitParams),
   async (req: Request, res: Response): Promise<void> => {
     const caller = (req as AuthReq).user;
@@ -716,10 +844,10 @@ router.post(
       res.status(404).json({ error: "Visita não encontrada" });
       return;
     }
-    if (visit.status !== "ongoing") {
+    if (!openVisitStatuses.includes(visit.status)) {
       res
         .status(400)
-        .json({ error: "Somente visitas em andamento podem ser finalizadas" });
+        .json({ error: "Somente visitas abertas podem ser finalizadas" });
       return;
     }
 
@@ -733,10 +861,19 @@ router.post(
       })
       .where(eq(visitsTable.id, id));
 
+    // Quem sai antes de ser chamado deixa a fila sem ter sido atendido.
     await db
       .update(serviceQueueTable)
-      .set({ status: "completed", completedAt: new Date() })
-      .where(eq(serviceQueueTable.visitId, id));
+      .set({
+        status: sql`CASE WHEN ${serviceQueueTable.status} = 'waiting' THEN 'cancelled' ELSE 'completed' END`,
+        completedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(serviceQueueTable.visitId, id),
+          inArray(serviceQueueTable.status, ["waiting", "called"]),
+        ),
+      );
     publishServiceQueueUpdate();
 
     await auditAction({
@@ -755,7 +892,7 @@ router.post(
 router.post(
   "/visits/:id/cancel",
   requireAuth,
-  requireAdmin,
+  requirePermission("cancelVisit"),
   validate("params", CancelVisitParams),
   validate("body", CancelVisitBody),
   async (req: Request, res: Response): Promise<void> => {
@@ -791,7 +928,12 @@ router.post(
     await db
       .update(serviceQueueTable)
       .set({ status: "cancelled", completedAt: new Date() })
-      .where(eq(serviceQueueTable.visitId, id));
+      .where(
+        and(
+          eq(serviceQueueTable.visitId, id),
+          inArray(serviceQueueTable.status, ["waiting", "called"]),
+        ),
+      );
     publishServiceQueueUpdate();
 
     await auditAction({
@@ -811,7 +953,7 @@ router.post(
 router.post(
   "/visits/:id/reprint",
   requireAuth,
-  requireAdmin,
+  requirePermission("reprintLabel"),
   validate("params", ReprintLabelParams),
   async (req: Request, res: Response): Promise<void> => {
     const caller = (req as AuthReq).user;

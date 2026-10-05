@@ -41,11 +41,27 @@ export const LoginResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -74,11 +90,27 @@ export const GetCurrentUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -106,11 +138,27 @@ export const ChangePasswordResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -135,11 +183,27 @@ export const ListUsersResponseItem = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -159,11 +223,27 @@ export const CreateUserBody = zod.object({
   "sectorId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive']).default(createUserBodyStatusDefault),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }).optional()
 })
 
@@ -176,11 +256,27 @@ export const CreateUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -203,11 +299,27 @@ export const GetUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -228,11 +340,27 @@ export const UpdateUserBody = zod.object({
   "sectorId": zod.number().nullish(),
   "status": zod.enum(['active', 'inactive']).optional(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }).optional()
 })
 
@@ -245,11 +373,27 @@ export const UpdateUserResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -415,6 +559,7 @@ export const ListVisitorsResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })),
@@ -427,9 +572,13 @@ export const ListVisitorsResponse = zod.object({
 /**
  * @summary Create visitor
  */
+export const createVisitorBodyBirthDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const CreateVisitorBody = zod.object({
   "name": zod.string(),
   "cpf": zod.string(),
+  "birthDate": zod.string().regex(createVisitorBodyBirthDateRegExp),
   "phone": zod.string().optional(),
   "company": zod.string().optional(),
   "city": zod.string().optional()
@@ -442,6 +591,7 @@ export const CreateVisitorResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -461,6 +611,7 @@ export const SearchVisitorsResponseItem = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -481,6 +632,7 @@ export const GetVisitorResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish(),
   "visits": zod.array(zod.object({
@@ -493,6 +645,7 @@ export const GetVisitorResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -510,7 +663,7 @@ export const GetVisitorResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -523,11 +676,27 @@ export const GetVisitorResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -544,16 +713,43 @@ export const GetVisitorResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 }))
 })
@@ -566,9 +762,13 @@ export const UpdateVisitorParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const updateVisitorBodyBirthDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const UpdateVisitorBody = zod.object({
   "name": zod.string().optional(),
   "cpf": zod.string().optional(),
+  "birthDate": zod.string().regex(updateVisitorBodyBirthDateRegExp).optional(),
   "phone": zod.string().optional(),
   "company": zod.string().optional(),
   "city": zod.string().optional()
@@ -581,6 +781,7 @@ export const UpdateVisitorResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 })
@@ -597,7 +798,7 @@ export const listVisitsQueryLimitDefault = 20;
 export const ListVisitsQueryParams = zod.object({
   "search": zod.coerce.string().optional(),
   "sectorId": zod.coerce.number().optional(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']).optional(),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']).optional(),
   "dateFrom": zod.coerce.string().regex(listVisitsQueryDateFromRegExp).optional(),
   "dateTo": zod.coerce.string().regex(listVisitsQueryDateToRegExp).optional(),
   "userId": zod.coerce.number().optional(),
@@ -616,6 +817,7 @@ export const ListVisitsResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -633,7 +835,7 @@ export const ListVisitsResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -646,11 +848,27 @@ export const ListVisitsResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -667,16 +885,43 @@ export const ListVisitsResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })),
   "total": zod.number(),
@@ -688,6 +933,7 @@ export const ListVisitsResponse = zod.object({
 /**
  * @summary Register a visit entry (creates visitor if not exists)
  */
+export const createVisitBodyThreeVisitorBirthDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 export const createVisitBodyThreeUpdateVisitorDataDefault = false;
 
 export const CreateVisitBody = zod.union([zod.unknown(),zod.unknown()]).and(zod.object({
@@ -697,11 +943,13 @@ export const CreateVisitBody = zod.union([zod.unknown(),zod.unknown()]).and(zod.
   "visitorPhone": zod.string().optional(),
   "visitorCompany": zod.string().optional(),
   "visitorCity": zod.string().optional(),
+  "visitorBirthDate": zod.string().regex(createVisitBodyThreeVisitorBirthDateRegExp).optional().describe('Obrigatória para novos visitantes e para cadastros antigos sem data.'),
   "updateVisitorData": zod.boolean().default(createVisitBodyThreeUpdateVisitorDataDefault),
   "sectorId": zod.number(),
   "responsible": zod.string().optional(),
   "reason": zod.string().optional(),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "priorityReason": zod.union([zod.literal('pregnant'),zod.literal('lactating'),zod.literal('infant'),zod.literal('disabled'),zod.literal('autism'),zod.literal('obese'),zod.literal(null)]).nullish()
 }))
 
 export const CreateVisitResponse = zod.object({
@@ -714,6 +962,7 @@ export const CreateVisitResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -731,7 +980,7 @@ export const CreateVisitResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -744,11 +993,27 @@ export const CreateVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -765,16 +1030,43 @@ export const CreateVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -796,6 +1088,7 @@ export const GetVisitResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -813,7 +1106,7 @@ export const GetVisitResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -826,11 +1119,27 @@ export const GetVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -847,16 +1156,43 @@ export const GetVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -887,6 +1223,7 @@ export const UpdateVisitResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -904,7 +1241,7 @@ export const UpdateVisitResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -917,11 +1254,27 @@ export const UpdateVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -938,16 +1291,43 @@ export const UpdateVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -969,6 +1349,7 @@ export const CheckoutVisitResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -986,7 +1367,7 @@ export const CheckoutVisitResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -999,11 +1380,27 @@ export const CheckoutVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -1020,16 +1417,43 @@ export const CheckoutVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1055,6 +1479,7 @@ export const CancelVisitResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -1072,7 +1497,7 @@ export const CancelVisitResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -1085,11 +1510,27 @@ export const CancelVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -1106,16 +1547,43 @@ export const CancelVisitResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1195,6 +1663,7 @@ export const GetRecentVisitsResponseItem = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -1212,7 +1681,7 @@ export const GetRecentVisitsResponseItem = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -1225,11 +1694,27 @@ export const GetRecentVisitsResponseItem = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -1246,16 +1731,43 @@ export const GetRecentVisitsResponseItem = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })
 export const GetRecentVisitsResponse = zod.array(GetRecentVisitsResponseItem)
@@ -1273,7 +1785,7 @@ export const GetVisitsReportQueryParams = zod.object({
   "dateTo": zod.coerce.string().regex(getVisitsReportQueryDateToRegExp).optional(),
   "sectorId": zod.coerce.number().optional(),
   "userId": zod.coerce.number().optional(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']).optional()
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']).optional()
 })
 
 export const GetVisitsReportResponse = zod.object({
@@ -1287,6 +1799,7 @@ export const GetVisitsReportResponse = zod.object({
   "phone": zod.string().nullish(),
   "company": zod.string().nullish(),
   "city": zod.string().nullish(),
+  "birthDate": zod.string().nullish().describe('Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.'),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
@@ -1304,7 +1817,7 @@ export const GetVisitsReportResponse = zod.object({
   "responsible": zod.string().nullish(),
   "reason": zod.string().nullish(),
   "notes": zod.string().nullish(),
-  "status": zod.enum(['ongoing', 'finished', 'cancelled']),
+  "status": zod.enum(['waiting', 'ongoing', 'finished', 'cancelled']),
   "entryDate": zod.coerce.date(),
   "entryTime": zod.string(),
   "entryUserId": zod.number(),
@@ -1317,11 +1830,27 @@ export const GetVisitsReportResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
@@ -1338,16 +1867,43 @@ export const GetVisitsReportResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()
 }).optional(),
   "cancelReason": zod.string().nullish(),
+  "priorityReason": zod.string().nullish().describe('Motivo de prioridade informado pela recepção.'),
+  "service": zod.union([zod.object({
+  "status": zod.enum(['waiting', 'called', 'completed', 'cancelled']),
+  "queuedAt": zod.coerce.date(),
+  "calledAt": zod.coerce.date().nullish(),
+  "completedAt": zod.coerce.date().nullish(),
+  "priorityLevel": zod.number().describe('0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).'),
+  "priorityReason": zod.string().nullish(),
+  "deskName": zod.string().nullish(),
+  "attendantName": zod.string().nullish()
+}).describe('Situação da visita na fila da Central de Atendimento.'),zod.null()]).optional(),
   "createdAt": zod.coerce.date()
 })),
   "total": zod.number(),
@@ -1389,11 +1945,27 @@ export const ListAuditLogsResponse = zod.object({
   "status": zod.enum(['active', 'inactive']),
   "mustChangePassword": zod.boolean(),
   "permissions": zod.object({
+  "viewDashboard": zod.boolean(),
+  "viewDashboardCharts": zod.boolean(),
+  "viewVisits": zod.boolean(),
+  "registerVisit": zod.boolean(),
+  "checkoutVisit": zod.boolean(),
+  "editVisit": zod.boolean(),
+  "cancelVisit": zod.boolean(),
+  "reprintLabel": zod.boolean(),
+  "viewVisitors": zod.boolean(),
+  "createVisitor": zod.boolean(),
   "editVisitorName": zod.boolean(),
   "editVisitorCpf": zod.boolean(),
+  "editVisitorBirthDate": zod.boolean(),
   "editVisitorPhone": zod.boolean(),
   "editVisitorCompany": zod.boolean(),
-  "editVisitorCity": zod.boolean()
+  "editVisitorCity": zod.boolean(),
+  "accessServiceCenter": zod.boolean(),
+  "viewReports": zod.boolean(),
+  "manageSectors": zod.boolean(),
+  "manageSettings": zod.boolean(),
+  "viewAudit": zod.boolean()
 }),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date().nullish()

@@ -1,17 +1,19 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
   db,
-  defaultUserPermissions,
   visitorsTable,
   visitsTable,
   sectorsTable,
   usersTable,
-  type UserPermissions,
+  type PermissionKey,
 } from "@visit-control/db";
 import { eq, ilike, or, and, desc, sql, type SQL } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { auditAction } from "../lib/audit";
 import { isValidCpf, stripCpfMask } from "../lib/cpf";
+import { hasPermission } from "../lib/permissions";
+import { isValidBirthDate } from "../lib/priority";
+import { getDashboardPeriods } from "../lib/dashboard-periods";
 import {
   CreateVisitorBody,
   GetVisitorParams,
@@ -40,6 +42,7 @@ function formatVisitor(v: typeof visitorsTable.$inferSelect) {
 router.get(
   "/visitors/search",
   requireAuth,
+  requirePermission("viewVisitors", "registerVisit"),
   validate("query", SearchVisitorsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const q = req.query.q as string | undefined;
@@ -67,6 +70,7 @@ router.get(
 router.get(
   "/visitors",
   requireAuth,
+  requirePermission("viewVisitors", "registerVisit"),
   validate("query", ListVisitorsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const {
@@ -117,12 +121,21 @@ router.get(
 router.post(
   "/visitors",
   requireAuth,
+  requirePermission("createVisitor"),
   validate("body", CreateVisitorRequest),
   async (req: Request, res: Response): Promise<void> => {
-    const { name, phone, company, city } = req.body ?? {};
+    const { name, phone, company, city, birthDate } = req.body ?? {};
     let { cpf } = req.body ?? {};
     if (!name || !cpf) {
       res.status(400).json({ error: "Nome e CPF são obrigatórios" });
+      return;
+    }
+    if (!birthDate) {
+      res.status(400).json({ error: "Data de nascimento é obrigatória" });
+      return;
+    }
+    if (!isValidBirthDate(birthDate, getDashboardPeriods().today)) {
+      res.status(400).json({ error: "Data de nascimento inválida" });
       return;
     }
 
@@ -150,6 +163,7 @@ router.post(
         phone: phone ? String(phone) : null,
         company: company ? String(company) : null,
         city: city ? String(city) : null,
+        birthDate: String(birthDate),
       })
       .returning();
 
@@ -159,7 +173,7 @@ router.post(
       ipAddress: req.ip,
       entityType: "visitor",
       entityId: visitor.id,
-      newData: { name, cpf, phone, company, city },
+      newData: { name, cpf, phone, company, city, birthDate },
     });
 
     res.status(201).json(formatVisitor(visitor));
@@ -169,6 +183,7 @@ router.post(
 router.get(
   "/visitors/:id",
   requireAuth,
+  requirePermission("viewVisitors", "registerVisit"),
   validate("params", GetVisitorParams),
   async (req: Request, res: Response): Promise<void> => {
     const id = parseInt(
@@ -235,22 +250,19 @@ router.patch(
   validate("body", UpdateVisitorBody),
   async (req: Request, res: Response): Promise<void> => {
     const caller = (req as AuthReq).user;
-    const permissions: UserPermissions =
-      caller.role === "admin"
-        ? defaultUserPermissions
-        : { ...defaultUserPermissions, ...caller.permissions };
-    const fieldPermissions: Record<string, keyof UserPermissions> = {
+    const fieldPermissions: Record<string, PermissionKey> = {
       name: "editVisitorName",
       cpf: "editVisitorCpf",
+      birthDate: "editVisitorBirthDate",
       phone: "editVisitorPhone",
       company: "editVisitorCompany",
       city: "editVisitorCity",
     };
     const forbiddenFields = Object.keys(req.body ?? {}).filter((field) => {
       const permission = fieldPermissions[field];
-      return !permission || !permissions[permission];
+      return !permission || !hasPermission(caller, permission);
     });
-    if (caller.role !== "admin" && forbiddenFields.length > 0) {
+    if (forbiddenFields.length > 0) {
       res.status(403).json({
         error: "Você não possui permissão para editar estes campos do visitante.",
         fields: forbiddenFields,
@@ -271,12 +283,19 @@ router.patch(
       return;
     }
 
-    const { name, phone, company, city } = req.body ?? {};
+    const { name, phone, company, city, birthDate } = req.body ?? {};
     let { cpf } = req.body ?? {};
     const updates: Partial<typeof visitorsTable.$inferInsert> = {
       updatedAt: new Date(),
     };
     if (name) updates.name = String(name);
+    if (birthDate !== undefined) {
+      if (!isValidBirthDate(birthDate, getDashboardPeriods().today)) {
+        res.status(400).json({ error: "Data de nascimento inválida" });
+        return;
+      }
+      updates.birthDate = String(birthDate);
+    }
     if (cpf !== undefined) {
       if (!cpf) {
         res.status(400).json({ error: "CPF é obrigatório." });

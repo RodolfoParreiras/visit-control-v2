@@ -5,8 +5,8 @@ import {
   visitorsTable,
   sectorsTable,
 } from "@visit-control/db";
-import { eq, sql, desc, and, gte, lte } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { GetRecentVisitsQueryParams } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 import { resolveVisitorSnapshot } from "../lib/visitor-snapshot";
@@ -20,6 +20,7 @@ const router: IRouter = Router();
 router.get(
   "/dashboard/stats",
   requireAuth,
+  requirePermission("viewDashboard"),
   async (_req: Request, res: Response): Promise<void> => {
     const periods = getDashboardPeriods();
     const todayStr = periods.today;
@@ -32,7 +33,7 @@ router.get(
     const [currentlyPresent] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(eq(visitsTable.status, "ongoing"));
+      .where(inArray(visitsTable.status, ["waiting", "ongoing"]));
 
     const [todayExits] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -67,6 +68,7 @@ router.get(
 router.get(
   "/dashboard/visits-by-sector",
   requireAuth,
+  requirePermission("viewDashboardCharts"),
   async (_req: Request, res: Response): Promise<void> => {
     const todayStr = getDashboardPeriods().today;
     const rows = await db
@@ -94,6 +96,7 @@ router.get(
 router.get(
   "/dashboard/weekly-chart",
   requireAuth,
+  requirePermission("viewDashboardCharts"),
   async (_req: Request, res: Response): Promise<void> => {
     const points = [];
     for (const dateStr of getDashboardPeriods().weekDates) {
@@ -114,6 +117,7 @@ router.get(
 router.get(
   "/dashboard/monthly-chart",
   requireAuth,
+  requirePermission("viewDashboardCharts"),
   async (_req: Request, res: Response): Promise<void> => {
     const points = [];
     for (const dateStr of getDashboardPeriods().monthDates) {
@@ -134,6 +138,7 @@ router.get(
 router.get(
   "/dashboard/recent-visits",
   requireAuth,
+  requirePermission("viewDashboard"),
   validate("query", GetRecentVisitsQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const limit = Math.min(

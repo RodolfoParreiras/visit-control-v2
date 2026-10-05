@@ -1,4 +1,5 @@
 import {
+  date,
   pgTable,
   serial,
   text,
@@ -17,6 +18,9 @@ export const visitorsTable = pgTable(
     phone: text("phone"),
     company: text("company"),
     city: text("city"),
+    // Opcional no banco porque cadastros antigos não têm a data; o sistema
+    // exige o preenchimento na próxima visita desses visitantes.
+    birthDate: date("birth_date", { mode: "string" }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

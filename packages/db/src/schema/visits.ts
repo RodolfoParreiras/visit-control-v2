@@ -1,4 +1,5 @@
 import {
+  date,
   pgTable,
   serial,
   text,
@@ -27,7 +28,7 @@ export const visitsTable = pgTable(
     reason: text("reason"),
     notes: text("notes"),
     status: text("status", {
-      enum: ["ongoing", "finished", "cancelled"],
+      enum: ["waiting", "ongoing", "finished", "cancelled"],
     })
       .notNull()
       .default("ongoing"),
@@ -47,6 +48,9 @@ export const visitsTable = pgTable(
     visitorPhone: text("visitor_phone"),
     visitorCompany: text("visitor_company"),
     visitorCity: text("visitor_city"),
+    visitorBirthDate: date("visitor_birth_date", { mode: "string" }),
+    // Motivo de prioridade informado pela recepção (gestante, PcD etc.).
+    priorityReason: text("priority_reason"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -54,7 +58,7 @@ export const visitsTable = pgTable(
   (table) => [
     uniqueIndex("visits_one_ongoing_per_visitor")
       .on(table.visitorId)
-      .where(sql`${table.status} = 'ongoing'`),
+      .where(sql`${table.status} IN ('waiting', 'ongoing')`),
   ],
 );
 

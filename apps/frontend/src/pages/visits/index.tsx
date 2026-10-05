@@ -22,6 +22,8 @@ import { formatDateOnly } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ServiceCell } from '@/components/ServiceInfo';
+import { can } from '@/lib/permissions';
 
 function getTodayInSaoPaulo() {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -38,6 +40,7 @@ function getTodayInSaoPaulo() {
 
 export default function VisitsList() {
   const { user } = useAuth();
+  const canCheckout = can(user, 'checkoutVisit');
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -104,10 +107,10 @@ export default function VisitsList() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <ClipboardList className="h-8 w-8" />
               Visitas
             </h1>
@@ -126,7 +129,7 @@ export default function VisitsList() {
         </div>
 
         <Card className="border-slate-200 p-5 shadow-sm sm:p-6">
-          <div className="grid items-end gap-4 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.6fr)_170px_170px_minmax(470px,2fr)] xl:gap-3">
+          <div className="grid items-end gap-4 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(260px,1.6fr)_170px_170px_minmax(470px,2fr)] 2xl:gap-3">
             <div className="space-y-2">
               <Label htmlFor="visit-search" className="text-sm font-semibold text-[#012c61]">Pesquisar</Label>
               <div className="relative">
@@ -149,6 +152,7 @@ export default function VisitsList() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="waiting">Aguardando atendimento</SelectItem>
                   <SelectItem value="ongoing">Em andamento</SelectItem>
                   <SelectItem value="finished">Finalizado</SelectItem>
                   <SelectItem value="cancelled">Cancelado</SelectItem>
@@ -171,12 +175,12 @@ export default function VisitsList() {
               </Select>
             </div>
 
-            <div className="space-y-2 md:col-span-2 xl:col-span-1">
+            <div className="space-y-2 md:col-span-2 lg:col-span-3 2xl:col-span-1">
               <Label className="text-sm font-semibold text-[#012c61]">Período</Label>
-              <div className="flex flex-wrap items-center gap-2 xl:flex-nowrap">
-                <Input type="date" value={dateFrom} max={dateTo} onChange={e => handleDateFromChange(e.target.value)} className="h-11 min-w-[145px] flex-1 rounded-lg border-slate-300 bg-white text-sm focus-visible:ring-[#174f8c] xl:min-w-0" />
+              <div className="flex flex-wrap items-center gap-2 2xl:flex-nowrap">
+                <Input type="date" value={dateFrom} max={dateTo} onChange={e => handleDateFromChange(e.target.value)} className="h-11 min-w-[145px] flex-1 rounded-lg border-slate-300 bg-white text-sm focus-visible:ring-[#174f8c] 2xl:min-w-0" />
                 <span className="shrink-0 text-sm text-slate-400">até</span>
-                <Input type="date" value={dateTo} min={dateFrom} onChange={e => handleDateToChange(e.target.value)} className="h-11 min-w-[145px] flex-1 rounded-lg border-slate-300 bg-white text-sm focus-visible:ring-[#174f8c] xl:min-w-0" />
+                <Input type="date" value={dateTo} min={dateFrom} onChange={e => handleDateToChange(e.target.value)} className="h-11 min-w-[145px] flex-1 rounded-lg border-slate-300 bg-white text-sm focus-visible:ring-[#174f8c] 2xl:min-w-0" />
                 <Button type="button" variant="outline" onClick={setTodayFilter} className="h-11 shrink-0 rounded-lg border-[#174f8c]/50 px-3 text-[#012c61] hover:bg-[#174f8c]/10">
                   <CalendarDays className="mr-2 h-4 w-4" />Hoje
                 </Button>
@@ -192,23 +196,25 @@ export default function VisitsList() {
               <h2 className="font-semibold text-[#012c61]">Registros encontrados</h2>
               <p className="mt-1 text-sm text-slate-500">{total} {total === 1 ? 'visita' : 'visitas'}</p>
             </div>
-            <Link href="/visits/new">
-              <Button className="h-11 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
-                <UserPlus className="h-4 w-4" />Nova Visita
-              </Button>
-            </Link>
+            {can(user, 'registerVisit') && (
+              <Link href="/visits/new">
+                <Button className="h-11 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
+                  <UserPlus className="h-4 w-4" />Nova Visita
+                </Button>
+              </Link>
+            )}
           </div>
           <div className="overflow-x-auto">
-            <Table className="table-fixed">
+            <Table className="min-w-[860px]">
               <TableHeader>
                 <TableRow className="bg-slate-50 hover:bg-slate-50">
-                  <TableHead className="w-[5%]">ID</TableHead>
-                  <TableHead className="w-[21%]">Visitante</TableHead>
-                  <TableHead className="w-[12%]">Setor</TableHead>
-                  <TableHead className="w-[17%]">Entrada</TableHead>
-                  <TableHead className="w-[11%]">Saída</TableHead>
-                  <TableHead className="w-[13%]">Status</TableHead>
-                  <TableHead className="w-[21%] text-right">Ações</TableHead>
+                  <TableHead className="hidden w-16 px-3 2xl:table-cell">ID</TableHead>
+                  <TableHead className="min-w-[180px] px-3">Visitante</TableHead>
+                  <TableHead className="min-w-[120px] px-3">Setor</TableHead>
+                  <TableHead className="whitespace-nowrap px-3">Horários</TableHead>
+                  <TableHead className="px-3">Status</TableHead>
+                  <TableHead className="min-w-[130px] px-3">Atendimento</TableHead>
+                  <TableHead className="px-3 text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -227,27 +233,34 @@ export default function VisitsList() {
                 ) : (
                   visits.map((visit) => (
                     <TableRow key={visit.id} className="hover:bg-slate-50/80">
-                      <TableCell className="font-mono text-xs text-gray-500">#{visit.id}</TableCell>
-                      <TableCell className="truncate font-medium" title={visit.visitor?.name}>{visit.visitor?.name}</TableCell>
-                      <TableCell className="truncate text-sm" title={visit.sector?.name}>{visit.sector?.name}</TableCell>
-                      <TableCell className="whitespace-nowrap text-sm text-slate-600">
-                        {formatDateOnly(visit.entryDate)} <span className="ml-1">{visit.entryTime}</span>
+                      <TableCell className="hidden px-3 py-3 font-mono text-xs text-gray-500 2xl:table-cell">#{visit.id}</TableCell>
+                      <TableCell className="px-3 py-3 break-words font-medium">{visit.visitor?.name}</TableCell>
+                      <TableCell className="px-3 py-3 break-words text-sm">{visit.sector?.name}</TableCell>
+                      <TableCell className="whitespace-nowrap px-3 py-3 text-sm text-slate-600">
+                        <div>
+                          <span className="text-slate-400">Entrada </span>
+                          {formatDateOnly(visit.entryDate)} {visit.entryTime}
+                        </div>
+                        <div>
+                          <span className="text-slate-400">Saída </span>
+                          {visit.exitTime ? `${formatDateOnly(visit.exitDate)} ${visit.exitTime}` : '—'}
+                        </div>
                       </TableCell>
-                      <TableCell className="whitespace-nowrap text-sm text-slate-600">
-                        {visit.exitTime ? `${formatDateOnly(visit.exitDate)} ${visit.exitTime}` : '-'}
-                      </TableCell>
-                      <TableCell><StatusBadge status={visit.status} /></TableCell>
-                      <TableCell className="text-right whitespace-nowrap space-x-1">
-                        {visit.status === 'ongoing' && (
-                          <Button variant="outline" size="sm" className="h-9 border-slate-200 px-3 text-[#012c61] hover:border-transparent hover:bg-red-600 hover:text-white" onClick={() => setVisitToCheckout({ id: visit.id, visitorName: visit.visitor?.name ?? 'este visitante' })} disabled={checkoutVisit.isPending}>
-                            <CheckoutIcon className="mr-1.5 h-3.5 w-3.5" />Saída
-                          </Button>
-                        )}
-                        <Link href={`/visits/${visit.id}`}>
-                          <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 px-3 text-[#012c61] hover:bg-[#174f8c]/10" title="Ver Detalhes">
-                            <Eye className="h-4 w-4" />Detalhes
-                          </Button>
-                        </Link>
+                      <TableCell className="px-3 py-3"><StatusBadge status={visit.status} /></TableCell>
+                      <TableCell className="px-3 py-3"><ServiceCell service={visit.service} /></TableCell>
+                      <TableCell className="whitespace-nowrap px-3 py-3 text-right">
+                        <div className="inline-flex gap-1.5">
+                          {canCheckout && (visit.status === 'waiting' || visit.status === 'ongoing') && (
+                            <Button variant="outline" size="sm" className="h-9 gap-1.5 border-slate-200 px-2.5 text-[#012c61] hover:border-transparent hover:bg-red-600 hover:text-white" onClick={() => setVisitToCheckout({ id: visit.id, visitorName: visit.visitor?.name ?? 'este visitante' })} disabled={checkoutVisit.isPending} title="Registrar saída" aria-label="Registrar saída">
+                              <CheckoutIcon className="h-4 w-4" /><span className="hidden 2xl:inline">Saída</span>
+                            </Button>
+                          )}
+                          <Link href={`/visits/${visit.id}`}>
+                            <Button variant="outline" size="sm" className="h-9 gap-1.5 border-slate-200 px-2.5 text-[#012c61] hover:bg-[#174f8c]/10" title="Ver detalhes" aria-label="Ver detalhes">
+                              <Eye className="h-4 w-4" /><span className="hidden 2xl:inline">Detalhes</span>
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))

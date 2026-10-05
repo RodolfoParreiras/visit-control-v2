@@ -1,8 +1,16 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import bcrypt from "bcryptjs";
-import { db, defaultUserPermissions, usersTable, type UserPermissions } from "@visit-control/db";
+import {
+  db,
+  defaultPermissionsForRole,
+  resolvePermissions,
+  usersTable,
+  type UserPermissions,
+  type UserRole,
+} from "@visit-control/db";
 import { eq, ilike, and, type SQL } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { requireAuth, requireAdmin, requirePermission } from "../middlewares/auth";
+import { publicUser } from "../lib/permissions";
 import { auditAction } from "../lib/audit";
 import {
   CreateUserBody,
@@ -23,30 +31,30 @@ const INITIAL_PASSWORD = "Mudar@123!";
 const CreateUserRequest = CreateUserBody;
 const UpdateUserRequest = UpdateUserBody;
 
-function safeUser(u: typeof usersTable.$inferSelect) {
-  const { passwordHash: _ph, ...rest } = u;
-  return {
-    ...rest,
-    createdAt: u.createdAt.toISOString(),
-    updatedAt: u.updatedAt?.toISOString() ?? null,
-  };
-}
-
-function normalizePermissions(value: unknown, base: UserPermissions = defaultUserPermissions): UserPermissions {
-  const input = value && typeof value === "object" ? value as Partial<UserPermissions> : {};
-  return {
-    editVisitorName: typeof input.editVisitorName === "boolean" ? input.editVisitorName : base.editVisitorName,
-    editVisitorCpf: typeof input.editVisitorCpf === "boolean" ? input.editVisitorCpf : base.editVisitorCpf,
-    editVisitorPhone: typeof input.editVisitorPhone === "boolean" ? input.editVisitorPhone : base.editVisitorPhone,
-    editVisitorCompany: typeof input.editVisitorCompany === "boolean" ? input.editVisitorCompany : base.editVisitorCompany,
-    editVisitorCity: typeof input.editVisitorCity === "boolean" ? input.editVisitorCity : base.editVisitorCity,
-  };
+/**
+ * O setor vincula o usuário a uma Central de Atendimento. É obrigatório para
+ * quem tem acesso à central (exceto administradores) e descartado nos demais.
+ */
+function resolveSector(
+  role: UserRole,
+  permissions: UserPermissions,
+  sectorId: unknown,
+): { sectorId: number | null } | { error: string } {
+  const value = sectorId == null || sectorId === "" ? null : Number(sectorId);
+  if (value !== null && (!Number.isInteger(value) || value <= 0)) {
+    return { error: "Setor inválido" };
+  }
+  if (role !== "admin" && !permissions.accessServiceCenter) return { sectorId: null };
+  if (role !== "admin" && value === null) {
+    return { error: "Informe o setor de atendimento para usuários com acesso à Central de Atendimento" };
+  }
+  return { sectorId: value };
 }
 
 router.get(
   "/users",
   requireAuth,
-  requireAdmin,
+  requirePermission("viewAudit"),
   validate("query", ListUsersQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const { search, role, status } = req.query as Record<
@@ -68,7 +76,7 @@ router.get(
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(usersTable.name);
 
-    res.json(users.map(safeUser));
+    res.json(users.map(publicUser));
   },
 );
 
@@ -85,8 +93,11 @@ router.post(
         .json({ error: "Campos obrigatórios: nome, login, perfil" });
       return;
     }
-    if (role === "attendant" && !sectorId) {
-      res.status(400).json({ error: "Setor é obrigatório para o perfil atendente" });
+    const userRole = role as UserRole;
+    const userPermissions = resolvePermissions(userRole, permissions);
+    const sector = resolveSector(userRole, userPermissions, sectorId);
+    if ("error" in sector) {
+      res.status(400).json({ error: sector.error });
       return;
     }
 
@@ -106,11 +117,11 @@ router.post(
         name: String(name),
         login: String(login),
         passwordHash,
-        role: role as "admin" | "receptionist" | "attendant",
-        sectorId: role === "attendant" ? Number(sectorId) : null,
+        role: userRole,
+        sectorId: sector.sectorId,
         status: (status as "active" | "inactive") ?? "active",
         mustChangePassword: true,
-        permissions: normalizePermissions(permissions),
+        permissions: userPermissions,
       })
       .returning();
 
@@ -123,7 +134,7 @@ router.post(
       newData: { name, login, role },
     });
 
-    res.status(201).json(safeUser(user));
+    res.status(201).json(publicUser(user));
   },
 );
 
@@ -146,7 +157,7 @@ router.get(
       res.status(404).json({ error: "Usuário não encontrado" });
       return;
     }
-    res.json(safeUser(user));
+    res.json(publicUser(user));
   },
 );
 
@@ -172,26 +183,40 @@ router.patch(
     }
 
     const { name, login, role, status, sectorId, permissions } = req.body ?? {};
+    const caller = (req as AuthReq).user;
+    const nextRole: UserRole = role ?? existing.role;
+    if (caller.id === id && existing.role === "admin" && nextRole !== "admin") {
+      res.status(400).json({ error: "Você não pode remover o seu próprio perfil de administrador" });
+      return;
+    }
+
+    // Ao trocar o perfil sem enviar permissões, aplica os padrões do novo perfil.
+    const nextPermissions =
+      permissions !== undefined
+        ? resolvePermissions(nextRole, permissions, resolvePermissions(nextRole, existing.permissions))
+        : nextRole === existing.role
+          ? resolvePermissions(nextRole, existing.permissions)
+          : defaultPermissionsForRole(nextRole);
+    const sector = resolveSector(
+      nextRole,
+      nextPermissions,
+      sectorId !== undefined ? sectorId : existing.sectorId,
+    );
+    if ("error" in sector) {
+      res.status(400).json({ error: sector.error });
+      return;
+    }
+
     const updates: Partial<typeof usersTable.$inferInsert> = {
       updatedAt: new Date(),
+      role: nextRole,
+      permissions: nextPermissions,
+      sectorId: sector.sectorId,
     };
     if (name) updates.name = String(name);
     if (login) updates.login = String(login);
-    if (role && ["admin", "receptionist", "attendant"].includes(role)) {
-      if (role === "attendant" && !(sectorId ?? existing.sectorId)) {
-        res.status(400).json({ error: "Setor é obrigatório para o perfil atendente" });
-        return;
-      }
-      updates.role = role;
-      updates.sectorId = role === "attendant" ? Number(sectorId ?? existing.sectorId) : null;
-    } else if (existing.role === "attendant" && sectorId) {
-      updates.sectorId = Number(sectorId);
-    }
     if (status && ["active", "inactive"].includes(status))
       updates.status = status;
-    if (permissions !== undefined) {
-      updates.permissions = normalizePermissions(permissions, existing.permissions);
-    }
 
     const [updated] = await db
       .update(usersTable)
@@ -205,11 +230,11 @@ router.patch(
       ipAddress: req.ip,
       entityType: "user",
       entityId: id,
-      previousData: safeUser(existing),
+      previousData: publicUser(existing),
       newData: req.body ?? {},
     });
 
-    res.json(safeUser(updated));
+    res.json(publicUser(updated));
   },
 );
 

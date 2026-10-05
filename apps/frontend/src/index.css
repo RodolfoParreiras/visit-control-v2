@@ -201,6 +201,16 @@
   }
 }
 
+/* Contêiner padrão das telas internas: mesma largura e espaçamento em todos os módulos. */
+@utility page-container {
+  @apply mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:space-y-7 lg:p-8;
+}
+
+/* Título padrão das telas internas. */
+@utility page-title {
+  @apply flex items-center gap-2 text-2xl font-bold tracking-tight text-[#012c61] sm:text-3xl;
+}
+
 /* Rolagem da navegação lateral alinhada à identidade visual do sistema. */
 .sidebar-scrollbar {
   overscroll-behavior: contain;

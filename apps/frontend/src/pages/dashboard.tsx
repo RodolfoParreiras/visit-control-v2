@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { can } from "@/lib/permissions";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Link } from "wouter";
 import {
@@ -38,7 +39,7 @@ import { ptBR } from "date-fns/locale";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isAdmin = can(user, "viewDashboardCharts");
 
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -192,10 +193,10 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               Dashboard
             </h1>
             <p className="mt-1 text-slate-500">

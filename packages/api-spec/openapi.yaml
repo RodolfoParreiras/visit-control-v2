@@ -538,7 +538,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [ongoing, finished, cancelled]
+            enum: [waiting, ongoing, finished, cancelled]
         - in: query
           name: dateFrom
           schema:
@@ -806,7 +806,7 @@ paths:
           name: status
           schema:
             type: string
-            enum: [ongoing, finished, cancelled]
+            enum: [waiting, ongoing, finished, cancelled]
       responses:
         "200":
           description: Report data
@@ -996,22 +996,70 @@ components:
       type: object
       required:
         [
+          viewDashboard,
+          viewDashboardCharts,
+          viewVisits,
+          registerVisit,
+          checkoutVisit,
+          editVisit,
+          cancelVisit,
+          reprintLabel,
+          viewVisitors,
+          createVisitor,
           editVisitorName,
           editVisitorCpf,
+          editVisitorBirthDate,
           editVisitorPhone,
           editVisitorCompany,
           editVisitorCity,
+          accessServiceCenter,
+          viewReports,
+          manageSectors,
+          manageSettings,
+          viewAudit,
         ]
       properties:
+        viewDashboard:
+          type: boolean
+        viewDashboardCharts:
+          type: boolean
+        viewVisits:
+          type: boolean
+        registerVisit:
+          type: boolean
+        checkoutVisit:
+          type: boolean
+        editVisit:
+          type: boolean
+        cancelVisit:
+          type: boolean
+        reprintLabel:
+          type: boolean
+        viewVisitors:
+          type: boolean
+        createVisitor:
+          type: boolean
         editVisitorName:
           type: boolean
         editVisitorCpf:
+          type: boolean
+        editVisitorBirthDate:
           type: boolean
         editVisitorPhone:
           type: boolean
         editVisitorCompany:
           type: boolean
         editVisitorCity:
+          type: boolean
+        accessServiceCenter:
+          type: boolean
+        viewReports:
+          type: boolean
+        manageSectors:
+          type: boolean
+        manageSettings:
+          type: boolean
+        viewAudit:
           type: boolean
 
     User:
@@ -1190,6 +1238,9 @@ components:
           type: ["string", "null"]
         city:
           type: ["string", "null"]
+        birthDate:
+          description: Data de nascimento (AAAA-MM-DD); nula em cadastros antigos.
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1199,12 +1250,15 @@ components:
 
     VisitorInput:
       type: object
-      required: [name, cpf]
+      required: [name, cpf, birthDate]
       properties:
         name:
           type: string
         cpf:
           type: string
+        birthDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
         phone:
           type: string
         company:
@@ -1219,6 +1273,9 @@ components:
           type: string
         cpf:
           type: string
+        birthDate:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
         phone:
           type: string
         company:
@@ -1241,6 +1298,8 @@ components:
         company:
           type: ["string", "null"]
         city:
+          type: ["string", "null"]
+        birthDate:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -1301,7 +1360,7 @@ components:
           type: ["string", "null"]
         status:
           type: string
-          enum: [ongoing, finished, cancelled]
+          enum: [waiting, ongoing, finished, cancelled]
         entryDate:
           type: string
           format: date
@@ -1322,9 +1381,43 @@ components:
           $ref: "#/components/schemas/User"
         cancelReason:
           type: ["string", "null"]
+        priorityReason:
+          description: Motivo de prioridade informado pela recepção.
+          type: ["string", "null"]
+        service:
+          oneOf:
+            - $ref: "#/components/schemas/VisitService"
+            - type: "null"
         createdAt:
           type: string
           format: date-time
+
+    VisitService:
+      description: Situação da visita na fila da Central de Atendimento.
+      type: object
+      required: [status, queuedAt, priorityLevel]
+      properties:
+        status:
+          type: string
+          enum: [waiting, called, completed, cancelled]
+        queuedAt:
+          type: string
+          format: date-time
+        calledAt:
+          type: ["string", "null"]
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+        priorityLevel:
+          description: 0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).
+          type: integer
+        priorityReason:
+          type: ["string", "null"]
+        deskName:
+          type: ["string", "null"]
+        attendantName:
+          type: ["string", "null"]
 
     VisitInput:
       type: object
@@ -1345,6 +1438,10 @@ components:
           type: string
         visitorCity:
           type: string
+        visitorBirthDate:
+          description: Obrigatória para novos visitantes e para cadastros antigos sem data.
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}$'
         updateVisitorData:
           type: boolean
           default: false
@@ -1356,6 +1453,9 @@ components:
           type: string
         notes:
           type: string
+        priorityReason:
+          type: ["string", "null"]
+          enum: [pregnant, lactating, infant, disabled, autism, obese, null]
 
     VisitUpdate:
       type: object

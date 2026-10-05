@@ -10,6 +10,7 @@ export type VisitStatus = typeof VisitStatus[keyof typeof VisitStatus];
 
 
 export const VisitStatus = {
+  waiting: 'waiting',
   ongoing: 'ongoing',
   finished: 'finished',
   cancelled: 'cancelled',

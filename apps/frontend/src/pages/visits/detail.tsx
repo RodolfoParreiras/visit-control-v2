@@ -25,6 +25,7 @@ import {
   ClipboardList,
   Clock,
   Edit,
+  Headphones,
   LogOut as CheckoutIcon,
   Printer,
   UserRound,
@@ -55,12 +56,25 @@ import { maskCpf } from "@/lib/cpf";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { can } from "@/lib/permissions";
+import { PriorityBadge, formatServiceTime } from "@/components/ServiceInfo";
+import { formatBirthDate } from "@/lib/birth-date";
+
+const serviceStatusLabels: Record<string, string> = {
+  waiting: "Aguardando na fila",
+  called: "Em atendimento",
+  completed: "Atendimento finalizado",
+  cancelled: "Saiu da fila sem atendimento",
+};
 
 export default function VisitDetail() {
   const { id } = useParams<{ id: string }>();
   const visitId = parseInt(id, 10);
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const canEditVisit = can(user, "editVisit");
+  const canCancelVisit = can(user, "cancelVisit");
+  const canCheckout = can(user, "checkoutVisit");
+  const canPrintLabel = can(user, "reprintLabel");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -127,6 +141,9 @@ export default function VisitDetail() {
       </AppLayout>
     );
   }
+
+  const isOpen = visit.status === "waiting" || visit.status === "ongoing";
+  const service = visit.service;
 
   const handleCheckout = () => {
     checkoutVisit.mutate(
@@ -205,10 +222,10 @@ export default function VisitDetail() {
 
   return (
     <AppLayout>
-      <div className="no-print mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="no-print page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <ClipboardList className="h-8 w-8" />
               Detalhes da Visita
             </h1>
@@ -256,16 +273,18 @@ export default function VisitDetail() {
                 Voltar para visitas
               </Button>
             </Link>
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              disabled={!labelConfig}
-              className="h-11 gap-2 rounded-lg border-slate-300 bg-white px-4 text-[#012c61] hover:bg-slate-50"
-            >
-              <Printer className="h-4 w-4" />
-              Etiqueta
-            </Button>
-            {isAdmin && (
+            {canPrintLabel && (
+              <Button
+                variant="outline"
+                onClick={handlePrint}
+                disabled={!labelConfig}
+                className="h-11 gap-2 rounded-lg border-slate-300 bg-white px-4 text-[#012c61] hover:bg-slate-50"
+              >
+                <Printer className="h-4 w-4" />
+                Etiqueta
+              </Button>
+            )}
+            {canEditVisit && (
               <Button
                 variant="outline"
                 onClick={openEditModal}
@@ -275,7 +294,7 @@ export default function VisitDetail() {
                 Editar
               </Button>
             )}
-            {visit.status === "ongoing" && (
+            {canCheckout && isOpen && (
               <Button
                 variant="outline"
                 onClick={() => setCheckoutConfirmationOpen(true)}
@@ -286,7 +305,7 @@ export default function VisitDetail() {
                 {checkoutVisit.isPending ? "Registrando..." : "Registrar Saída"}
               </Button>
             )}
-            {isAdmin && visit.status === "ongoing" && (
+            {canCancelVisit && isOpen && (
               <Button
                 variant="outline"
                 onClick={() => setCancelModalOpen(true)}
@@ -331,6 +350,14 @@ export default function VisitDetail() {
                     {visit.visitor?.cpf
                       ? maskCpf(visit.visitor.cpf)
                       : "Não informado"}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-500">
+                    Data de nascimento
+                  </Label>
+                  <p className="mt-1 font-medium text-slate-800">
+                    {formatBirthDate(visit.visitor?.birthDate)}
                   </p>
                 </div>
                 <div>
@@ -409,6 +436,67 @@ export default function VisitDetail() {
             </CardContent>
           </Card>
 
+          {service && (
+            <Card className="overflow-hidden border-slate-200 shadow-sm lg:col-span-2">
+              <CardHeader className="border-b border-slate-100 bg-white px-6 py-5">
+                <CardTitle className="flex items-center gap-2 text-lg text-[#012c61]">
+                  <Headphones className="h-5 w-5 text-slate-500" />
+                  Atendimento
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-5 p-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <Label className="text-sm text-slate-500">Situação</Label>
+                  <p className="mt-1 font-semibold text-slate-900">
+                    {serviceStatusLabels[service.status]}
+                  </p>
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-500">Mesa</Label>
+                  <p className="mt-1 font-semibold text-[#012c61]">
+                    {service.status === "waiting" || (service.status === "cancelled" && !service.calledAt)
+                      ? "Aguardando chamada"
+                      : service.deskName ?? "Chamada geral do setor"}
+                  </p>
+                  {service.attendantName && (
+                    <p className="mt-1 text-sm text-slate-500">
+                      Atendente: {service.attendantName}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-500">Horários</Label>
+                  <p className="mt-1 text-sm text-slate-700">
+                    Entrou na fila às {formatServiceTime(service.queuedAt)}
+                  </p>
+                  {service.calledAt && (
+                    <p className="text-sm text-slate-700">
+                      Chamado às {formatServiceTime(service.calledAt)}
+                    </p>
+                  )}
+                  {service.completedAt && service.status === "completed" && (
+                    <p className="text-sm text-slate-700">
+                      Finalizado às {formatServiceTime(service.completedAt)}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-sm text-slate-500">Fila</Label>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    {service.priorityLevel > 0 ? (
+                      <PriorityBadge level={service.priorityLevel} reason={service.priorityReason} />
+                    ) : (
+                      <span className="font-medium text-slate-800">Comum</span>
+                    )}
+                  </div>
+                  {service.priorityReason && (
+                    <p className="mt-1 text-sm text-slate-500">{service.priorityReason}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="overflow-hidden border-slate-200 shadow-sm lg:col-span-2">
             <CardHeader className="border-b border-slate-100 bg-white px-6 py-5">
               <CardTitle className="flex items-center gap-2 text-lg text-[#012c61]">
@@ -456,7 +544,7 @@ export default function VisitDetail() {
         onConfirm={handleCheckout}
       />
 
-      {isAdmin && (
+      {(canEditVisit || canCancelVisit) && (
         <>
           <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
             <DialogContent>

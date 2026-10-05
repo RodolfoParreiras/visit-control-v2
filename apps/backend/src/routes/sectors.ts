@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, sectorsTable, usersTable } from "@visit-control/db";
 import { eq, ilike, and, type SQL } from "drizzle-orm";
-import { requireAuth, requireAdmin } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { auditAction } from "../lib/audit";
 import {
   CreateSectorBody,
@@ -47,7 +47,7 @@ router.get(
 router.post(
   "/sectors",
   requireAuth,
-  requireAdmin,
+  requirePermission("manageSectors"),
   validate("body", CreateSectorBody),
   async (req: Request, res: Response): Promise<void> => {
     const { name, abbreviation, secretariat, status, queueEnabled, usesDesks } = req.body ?? {};
@@ -108,7 +108,7 @@ router.get(
 router.patch(
   "/sectors/:id",
   requireAuth,
-  requireAdmin,
+  requirePermission("manageSectors"),
   validate("params", UpdateSectorParams),
   validate("body", UpdateSectorBody),
   async (req: Request, res: Response): Promise<void> => {
@@ -160,7 +160,7 @@ router.patch(
 router.delete(
   "/sectors/:id",
   requireAuth,
-  requireAdmin,
+  requirePermission("manageSectors"),
   validate("params", DeleteSectorParams),
   async (req: Request, res: Response): Promise<void> => {
     const id = parseIntParam(req.params.id);

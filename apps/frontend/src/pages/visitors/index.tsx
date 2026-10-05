@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'wouter';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
+import { can } from '@/lib/permissions';
 import { maskCpf } from '@/lib/cpf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,10 +41,10 @@ export default function VisitorsList() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]">
+            <h1 className="page-title">
               <Users className="h-8 w-8" />
               Visitantes
             </h1>
@@ -70,9 +71,11 @@ export default function VisitorsList() {
                 <Input id="visitor-search" placeholder="Buscar visitante" value={search} onChange={(e) => setSearch(e.target.value)} className="h-11 rounded-lg border-slate-300 bg-white pl-10 focus-visible:ring-[#174f8c]" />
               </div>
             </div>
-            <Button type="button" onClick={() => setLocation('/visitors/new')} className="h-11 shrink-0 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
-              <UserPlus className="h-4 w-4" />Cadastrar Visitante
-            </Button>
+            {can(user, 'createVisitor') && (
+              <Button type="button" onClick={() => setLocation('/visitors/new')} className="h-11 shrink-0 gap-2 rounded-lg border-0 bg-[#012c61] px-5 font-semibold text-white hover:bg-[#01244f]">
+                <UserPlus className="h-4 w-4" />Cadastrar Visitante
+              </Button>
+            )}
           </div>
         </Card>
 

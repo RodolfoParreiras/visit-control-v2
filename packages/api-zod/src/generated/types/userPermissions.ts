@@ -7,9 +7,25 @@
  */
 
 export interface UserPermissions {
+  viewDashboard: boolean;
+  viewDashboardCharts: boolean;
+  viewVisits: boolean;
+  registerVisit: boolean;
+  checkoutVisit: boolean;
+  editVisit: boolean;
+  cancelVisit: boolean;
+  reprintLabel: boolean;
+  viewVisitors: boolean;
+  createVisitor: boolean;
   editVisitorName: boolean;
   editVisitorCpf: boolean;
+  editVisitorBirthDate: boolean;
   editVisitorPhone: boolean;
   editVisitorCompany: boolean;
   editVisitorCity: boolean;
+  accessServiceCenter: boolean;
+  viewReports: boolean;
+  manageSectors: boolean;
+  manageSettings: boolean;
+  viewAudit: boolean;
 }

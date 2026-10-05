@@ -6,7 +6,7 @@ import {
   sectorsTable,
 } from "@visit-control/db";
 import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
-import { requireAuth } from "../middlewares/auth";
+import { requireAuth, requirePermission } from "../middlewares/auth";
 import { GetVisitsReportQueryParams } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 import { resolveVisitorSnapshot } from "../lib/visitor-snapshot";
@@ -16,6 +16,7 @@ const router: IRouter = Router();
 router.get(
   "/reports/visits",
   requireAuth,
+  requirePermission("viewReports"),
   validate("query", GetVisitsReportQueryParams),
   async (req: Request, res: Response): Promise<void> => {
     const { dateFrom, dateTo, sectorId, userId, status } = req.query as Record<
@@ -30,9 +31,9 @@ router.get(
       conditions.push(eq(visitsTable.sectorId, parseInt(sectorId, 10)));
     if (userId)
       conditions.push(eq(visitsTable.entryUserId, parseInt(userId, 10)));
-    if (status && ["ongoing", "finished", "cancelled"].includes(status)) {
+    if (status && ["waiting", "ongoing", "finished", "cancelled"].includes(status)) {
       conditions.push(
-        eq(visitsTable.status, status as "ongoing" | "finished" | "cancelled"),
+        eq(visitsTable.status, status as "waiting" | "ongoing" | "finished" | "cancelled"),
       );
     }
 

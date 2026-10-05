@@ -21,6 +21,9 @@ export const serviceQueueTable = pgTable("service_queue", {
   completedAt: timestamp("completed_at", { withTimezone: true }),
   deskId: integer("desk_id").references(() => serviceDesksTable.id),
   attendantUserId: integer("attendant_user_id").references(() => usersTable.id),
+  // 0 = fila comum, 1 = prioritário, 2 = prioridade especial (80+).
+  priorityLevel: integer("priority_level").notNull().default(0),
+  priorityReason: text("priority_reason"),
 }, (table) => [uniqueIndex("service_queue_visit_unique").on(table.visitId)]);
 
 export const serviceCallsTable = pgTable("service_calls", {

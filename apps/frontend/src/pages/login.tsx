@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
+import { homePath } from '@/lib/permissions';
 
 const loginSchema = z.object({
   login: z.string().min(1, 'Usuário é obrigatório'),
@@ -32,7 +33,7 @@ export default function Login() {
     loginMutation.mutate({ data }, {
       onSuccess: (result) => {
         login(result.token, result.user);
-        navigate(result.user.mustChangePassword ? '/change-password' : result.user.role === 'attendant' ? '/service-center' : '/dashboard');
+        navigate(result.user.mustChangePassword ? '/change-password' : homePath(result.user));
       },
       onError: (error: unknown) => {
         const apiError = error instanceof ApiError ? error : null;

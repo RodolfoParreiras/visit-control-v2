@@ -157,10 +157,10 @@ export default function ConfigFields() {
 
   return (
     <AppLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-7 p-6 md:p-8">
+      <div className="page-container">
         <div className="flex items-start justify-between gap-6">
           <div>
-            <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-[#012c61]"><ListTodo className="h-8 w-8" />Campos do Formulário</h1>
+            <h1 className="page-title"><ListTodo className="h-8 w-8" />Campos do Formulário</h1>
             <p className="mt-1 text-slate-500">Configure quais campos são exibidos durante o registro de visitantes e suas obrigatoriedades.</p>
           </div>
           <div className="hidden text-right text-sm text-slate-500 sm:block">
