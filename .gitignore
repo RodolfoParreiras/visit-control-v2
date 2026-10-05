@@ -20,3 +20,5 @@ apps/desktop/build-tools/
 # Local
 *.local
 node_modules
+.pnpm-store/
+backups/
