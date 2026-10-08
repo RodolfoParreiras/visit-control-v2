@@ -21,6 +21,16 @@ export function publicUser(user: typeof usersTable.$inferSelect) {
   };
 }
 
+/**
+ * Setor que limita o que o usuário enxerga. Usuários (exceto administradores)
+ * vinculados a um setor só veem e operam informações desse setor; `null`
+ * significa acesso a todos os setores.
+ */
+export function sectorScope(user: Pick<typeof usersTable.$inferSelect, "role" | "sectorId">): number | null {
+  if (user.role === "admin") return null;
+  return user.sectorId ?? null;
+}
+
 /** Verdadeiro se o usuário tiver ao menos uma das permissões informadas. */
 export function hasPermission(user: User, ...keys: PermissionKey[]): boolean {
   if (user.role === "admin") return true;

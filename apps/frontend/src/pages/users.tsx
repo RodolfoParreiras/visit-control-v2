@@ -49,8 +49,10 @@ const userSchema = z.object({
 
 type UserFormValues = z.infer<typeof userSchema>;
 
-const usesSector = (values: Pick<UserFormValues, 'role' | 'permissions'>) =>
-  values.role === 'admin' || values.permissions.accessServiceCenter;
+// O setor é obrigatório só para quem opera a Central; nos demais é opcional e,
+// quando definido, limita o que o usuário enxerga (exceto administradores).
+const sectorRequired = (values: Pick<UserFormValues, 'role' | 'permissions'>) =>
+  values.role !== 'admin' && Boolean(values.permissions.accessServiceCenter);
 
 const errorMessage = (error: unknown) =>
   (error as { data?: { error?: string } } | null)?.data?.error;
@@ -112,7 +114,6 @@ export default function Users() {
   };
 
   const onSubmit = (data: UserFormValues) => {
-    if (!usesSector(data)) data.sectorId = null;
     if (editingUser) {
       updateUser.mutate({ id: editingUser.id, data }, {
         onSuccess: () => {
@@ -314,27 +315,33 @@ export default function Users() {
                   </FormItem>
                 )} />
               </div>
-              {usesSector({ role: form.watch('role'), permissions: form.watch('permissions') }) && (
+              {(() => {
+                const role = form.watch('role');
+                const required = sectorRequired({ role, permissions: form.watch('permissions') });
+                return (
                 <FormField control={form.control} name="sectorId" render={({ field }) => (
                   <FormItem>
-                    <FormLabel>
-                      Setor de atendimento{form.watch('role') === 'admin' ? ' (opcional)' : ''}
-                    </FormLabel>
+                    <FormLabel>Setor{required ? '' : ' (opcional)'}</FormLabel>
                     <Select
                       value={field.value ? String(field.value) : 'none'}
                       onValueChange={(value) => field.onChange(value === 'none' ? null : Number(value))}
                     >
                       <FormControl><SelectTrigger><SelectValue placeholder="Selecione o setor" /></SelectTrigger></FormControl>
                       <SelectContent>
-                        {form.watch('role') === 'admin' && <SelectItem value="none">Nenhum</SelectItem>}
-                        {sectors?.filter((sector) => sector.queueEnabled).map((sector) => <SelectItem key={sector.id} value={String(sector.id)}>{sector.name}</SelectItem>)}
+                        {!required && <SelectItem value="none">Nenhum (todos os setores)</SelectItem>}
+                        {sectors?.map((sector) => <SelectItem key={sector.id} value={String(sector.id)}>{sector.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-slate-500">Setor cuja Central de Atendimento este usuário vai operar.</p>
+                    <p className="text-xs text-slate-500">
+                      {role === 'admin'
+                        ? 'Administradores veem todos os setores; o setor só define qual Central de Atendimento ele opera.'
+                        : 'Com um setor definido, o usuário só vê visitas, visitantes, relatórios, dashboard e visor desse setor, e só registra visitas para ele.'}
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )} />
-              )}
+                );
+              })()}
               {form.watch('role') === 'admin' ? (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                   Administradores têm acesso a todas as funções do sistema, incluindo usuários e backup.

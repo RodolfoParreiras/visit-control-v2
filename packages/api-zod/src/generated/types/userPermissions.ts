@@ -24,6 +24,7 @@ export interface UserPermissions {
   editVisitorCompany: boolean;
   editVisitorCity: boolean;
   accessServiceCenter: boolean;
+  viewCallDisplay: boolean;
   viewReports: boolean;
   manageSectors: boolean;
   manageSettings: boolean;

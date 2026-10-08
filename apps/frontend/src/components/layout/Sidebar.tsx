@@ -89,7 +89,7 @@ export function Sidebar() {
           item("/service-center", "Central de Atendimento", Headphones)}
         {can(user, "viewReports") &&
           item("/reports", "Relatórios", FileBarChart)}
-        {can(user, "viewVisits", "registerVisit") && (
+        {can(user, "viewCallDisplay") && (
           <a
             href="/call-display"
             target="_blank"

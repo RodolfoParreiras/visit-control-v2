@@ -32,8 +32,9 @@ const CreateUserRequest = CreateUserBody;
 const UpdateUserRequest = UpdateUserBody;
 
 /**
- * O setor vincula o usuário a uma Central de Atendimento. É obrigatório para
- * quem tem acesso à central (exceto administradores) e descartado nos demais.
+ * O setor limita o que o usuário enxerga no sistema (ver `sectorScope`) e
+ * define a Central de Atendimento que ele opera. É opcional, mas obrigatório
+ * para quem acessa a central (exceto administradores).
  */
 function resolveSector(
   role: UserRole,
@@ -44,8 +45,7 @@ function resolveSector(
   if (value !== null && (!Number.isInteger(value) || value <= 0)) {
     return { error: "Setor inválido" };
   }
-  if (role !== "admin" && !permissions.accessServiceCenter) return { sectorId: null };
-  if (role !== "admin" && value === null) {
+  if (role !== "admin" && permissions.accessServiceCenter && value === null) {
     return { error: "Informe o setor de atendimento para usuários com acesso à Central de Atendimento" };
   }
   return { sectorId: value };

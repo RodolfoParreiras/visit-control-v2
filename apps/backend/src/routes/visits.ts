@@ -11,6 +11,7 @@ import {
 import { eq, ilike, and, desc, sql, gte, lte, inArray, type SQL } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requirePermission } from "../middlewares/auth";
+import { sectorScope } from "../lib/permissions";
 import {
   computePriority,
   isManualPriorityReason,
@@ -40,6 +41,12 @@ const router: IRouter = Router();
 const visitStatuses: VisitStatus[] = ["waiting", "ongoing", "finished", "cancelled"];
 const openVisitStatuses: VisitStatus[] = ["waiting", "ongoing"];
 const attendantUser = alias(usersTable, "attendant_user");
+
+// Visitas de outro setor são tratadas como inexistentes para usuários com setor.
+function outOfScope(req: Request, visitSectorId: number): boolean {
+  const scope = sectorScope((req as AuthReq).user);
+  return scope !== null && visitSectorId !== scope;
+}
 
 // Situação do visitante na Central de Atendimento, exibida para a recepção.
 const serviceFields = {
@@ -337,6 +344,8 @@ router.get(
     const offset = (pageNum - 1) * limitNum;
 
     const conditions: SQL[] = [];
+    const scope = sectorScope((req as AuthReq).user);
+    if (scope) conditions.push(eq(visitsTable.sectorId, scope));
     if (sectorId)
       conditions.push(eq(visitsTable.sectorId, parseInt(sectorId, 10)));
     if (status && visitStatuses.includes(status as VisitStatus)) {
@@ -499,6 +508,11 @@ router.post(
       .where(eq(sectorsTable.id, parseInt(String(sectorId), 10)));
     if (!destinationSector) {
       res.status(400).json({ error: "Setor não encontrado" });
+      return;
+    }
+    const scope = sectorScope(caller);
+    if (scope && destinationSector.id !== scope) {
+      res.status(403).json({ error: "Você só pode registrar visitas para o seu setor" });
       return;
     }
 
@@ -769,7 +783,7 @@ router.get(
       10,
     );
     const visit = await getFullVisit(id);
-    if (!visit) {
+    if (!visit || outOfScope(req, visit.sectorId)) {
       res.status(404).json({ error: "Visita não encontrada" });
       return;
     }
@@ -792,13 +806,17 @@ router.patch(
       .select()
       .from(visitsTable)
       .where(eq(visitsTable.id, id));
-    if (!existing) {
+    if (!existing || outOfScope(req, existing.sectorId)) {
       res.status(404).json({ error: "Visita não encontrada" });
       return;
     }
 
     const { sectorId, responsible, reason, notes, exitDate, exitTime } =
       req.body ?? {};
+    if (sectorId && outOfScope(req, parseInt(String(sectorId), 10))) {
+      res.status(403).json({ error: "Você só pode mover a visita para o seu setor" });
+      return;
+    }
     const updates: Partial<typeof visitsTable.$inferInsert> = {};
     if (sectorId) updates.sectorId = parseInt(String(sectorId), 10);
     if (responsible !== undefined)
@@ -840,7 +858,7 @@ router.post(
       .select()
       .from(visitsTable)
       .where(eq(visitsTable.id, id));
-    if (!visit) {
+    if (!visit || outOfScope(req, visit.sectorId)) {
       res.status(404).json({ error: "Visita não encontrada" });
       return;
     }
@@ -911,7 +929,7 @@ router.post(
       .select()
       .from(visitsTable)
       .where(eq(visitsTable.id, id));
-    if (!visit) {
+    if (!visit || outOfScope(req, visit.sectorId)) {
       res.status(404).json({ error: "Visita não encontrada" });
       return;
     }
@@ -961,6 +979,14 @@ router.post(
       Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
       10,
     );
+    const [visit] = await db
+      .select({ sectorId: visitsTable.sectorId })
+      .from(visitsTable)
+      .where(eq(visitsTable.id, id));
+    if (!visit || outOfScope(req, visit.sectorId)) {
+      res.status(404).json({ error: "Visita não encontrada" });
+      return;
+    }
 
     await auditAction({
       userId: caller.id,

@@ -75,7 +75,6 @@ export const globalLimiter = rateLimit({
   skip: (req) =>
     req.path === "/api/health" ||
     req.path === "/api/healthz" ||
-    req.path === "/api/service/display" ||
     req.path === "/api/service/display/events",
   standardHeaders: true,
   legacyHeaders: false,

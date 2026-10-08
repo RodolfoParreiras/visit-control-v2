@@ -3,6 +3,7 @@ import { db, pool, sectorsTable, serviceDesksTable, usersTable, type PoolClient 
 import { and, eq } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { auditAction } from "../lib/audit";
+import { sectorScope } from "../lib/permissions";
 import { addServiceDisplayClient, publishServiceCall, publishServiceQueueUpdate } from "../lib/service-events";
 
 type AuthReq = Request & { user: typeof usersTable.$inferSelect };
@@ -168,7 +169,8 @@ class ServiceError extends Error {
   }
 }
 
-async function displayData() {
+/** Últimas chamadas; `sectorId` restringe ao setor de quem abriu o visor. */
+async function displayData(sectorId: number | null) {
   const result = await pool.query(`
     SELECT c.id, c.called_at AS "calledAt", q.id AS "queueId",
       COALESCE(vs.visitor_name, vr.name) AS "visitorName",
@@ -180,13 +182,16 @@ async function displayData() {
     LEFT JOIN visitors vr ON vr.id = vs.visitor_id
     JOIN sectors s ON s.id = c.sector_id
     LEFT JOIN service_desks d ON d.id = c.desk_id
+    WHERE $1::int IS NULL OR c.sector_id = $1
     ORDER BY c.called_at DESC, c.id DESC
     LIMIT 6
-  `);
+  `, [sectorId]);
   return { current: result.rows[0] ?? null, recent: result.rows.slice(1) };
 }
 
-router.get("/service/display", async (_req, res) => res.json(await displayData()));
+// O visor mostra nomes de visitantes: exige login e a permissão própria.
+router.get("/service/display", requireAuth, requirePermission("viewCallDisplay"), async (req, res) =>
+  res.json(await displayData(sectorScope((req as AuthReq).user))));
 
 router.get("/service/display/events", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");

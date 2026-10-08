@@ -31,7 +31,10 @@ export const permissionGroups: { title: string; items: { key: PermissionKey; lab
   },
   {
     title: 'Atendimento',
-    items: [{ key: 'accessServiceCenter', label: 'Acessar a Central de Atendimento' }],
+    items: [
+      { key: 'accessServiceCenter', label: 'Acessar a Central de Atendimento' },
+      { key: 'viewCallDisplay', label: 'Abrir o visor de chamadas' },
+    ],
   },
   {
     title: 'Painel e relatórios',
@@ -75,6 +78,7 @@ export function defaultPermissionsForRole(role: Role): UserPermissions {
     'editVisitorCompany',
     'editVisitorCity',
     'viewReports',
+    'viewCallDisplay',
   ]);
 }
 
@@ -101,5 +105,6 @@ export function homePath(user: User): string {
   if (can(user, 'manageSectors')) return '/sectors';
   if (can(user, 'manageSettings')) return '/config/fields';
   if (can(user, 'viewAudit')) return '/audit';
+  if (can(user, 'viewCallDisplay')) return '/call-display';
   return '/no-access';
 }

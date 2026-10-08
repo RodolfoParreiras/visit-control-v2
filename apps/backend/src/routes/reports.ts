@@ -7,6 +7,7 @@ import {
 } from "@visit-control/db";
 import { eq, and, gte, lte, sql, desc, type SQL } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../middlewares/auth";
+import { sectorScope } from "../lib/permissions";
 import { GetVisitsReportQueryParams } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 import { resolveVisitorSnapshot } from "../lib/visitor-snapshot";
@@ -25,6 +26,8 @@ router.get(
     >;
 
     const conditions: SQL[] = [];
+    const scope = sectorScope((req as Request & { user: Parameters<typeof sectorScope>[0] }).user);
+    if (scope) conditions.push(eq(visitsTable.sectorId, scope));
     if (dateFrom) conditions.push(gte(visitsTable.entryDate, dateFrom));
     if (dateTo) conditions.push(lte(visitsTable.entryDate, dateTo));
     if (sectorId)

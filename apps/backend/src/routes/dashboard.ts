@@ -7,6 +7,7 @@ import {
 } from "@visit-control/db";
 import { eq, sql, desc, and, gte, lte, inArray } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../middlewares/auth";
+import { sectorScope } from "../lib/permissions";
 import { GetRecentVisitsQueryParams } from "@visit-control/api-zod";
 import { validate } from "../middlewares/validate";
 import { resolveVisitorSnapshot } from "../lib/visitor-snapshot";
@@ -17,23 +18,29 @@ import {
 
 const router: IRouter = Router();
 
+// Usuários com setor só veem os números do próprio setor.
+const inScope = (req: Request) => {
+  const scope = sectorScope((req as Request & { user: Parameters<typeof sectorScope>[0] }).user);
+  return scope ? eq(visitsTable.sectorId, scope) : undefined;
+};
+
 router.get(
   "/dashboard/stats",
   requireAuth,
   requirePermission("viewDashboard"),
-  async (_req: Request, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const periods = getDashboardPeriods();
     const todayStr = periods.today;
 
     const [todayTotal] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(eq(visitsTable.entryDate, todayStr));
+      .where(and(eq(visitsTable.entryDate, todayStr), inScope(req)));
 
     const [currentlyPresent] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(inArray(visitsTable.status, ["waiting", "ongoing"]));
+      .where(and(inArray(visitsTable.status, ["waiting", "ongoing"]), inScope(req)));
 
     const [todayExits] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -42,18 +49,19 @@ router.get(
         and(
           eq(visitsTable.exitDate, todayStr),
           eq(visitsTable.status, "finished"),
+          inScope(req),
         ),
       );
 
     const [weekTotal] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(and(gte(visitsTable.entryDate, periods.weekStart), lte(visitsTable.entryDate, periods.weekEnd)));
+      .where(and(gte(visitsTable.entryDate, periods.weekStart), lte(visitsTable.entryDate, periods.weekEnd), inScope(req)));
 
     const [monthTotal] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(visitsTable)
-      .where(and(gte(visitsTable.entryDate, periods.monthStart), lte(visitsTable.entryDate, periods.monthEnd)));
+      .where(and(gte(visitsTable.entryDate, periods.monthStart), lte(visitsTable.entryDate, periods.monthEnd), inScope(req)));
 
     res.json({
       todayTotal: todayTotal.count,
@@ -69,7 +77,7 @@ router.get(
   "/dashboard/visits-by-sector",
   requireAuth,
   requirePermission("viewDashboardCharts"),
-  async (_req: Request, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const todayStr = getDashboardPeriods().today;
     const rows = await db
       .select({
@@ -79,7 +87,7 @@ router.get(
       })
       .from(visitsTable)
       .leftJoin(sectorsTable, eq(visitsTable.sectorId, sectorsTable.id))
-      .where(eq(visitsTable.entryDate, todayStr))
+      .where(and(eq(visitsTable.entryDate, todayStr), inScope(req)))
       .groupBy(visitsTable.sectorId, sectorsTable.name)
       .orderBy(sql`count(*) desc`);
 
@@ -97,7 +105,7 @@ router.get(
   "/dashboard/weekly-chart",
   requireAuth,
   requirePermission("viewDashboardCharts"),
-  async (_req: Request, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const points = [];
     for (const dateStr of getDashboardPeriods().weekDates) {
       const label = formatDashboardDateLabel(dateStr, {
@@ -107,7 +115,7 @@ router.get(
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(visitsTable)
-        .where(eq(visitsTable.entryDate, dateStr));
+        .where(and(eq(visitsTable.entryDate, dateStr), inScope(req)));
       points.push({ label, total: count });
     }
     res.json(points);
@@ -118,7 +126,7 @@ router.get(
   "/dashboard/monthly-chart",
   requireAuth,
   requirePermission("viewDashboardCharts"),
-  async (_req: Request, res: Response): Promise<void> => {
+  async (req: Request, res: Response): Promise<void> => {
     const points = [];
     for (const dateStr of getDashboardPeriods().monthDates) {
       const label = formatDashboardDateLabel(dateStr, {
@@ -128,7 +136,7 @@ router.get(
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(visitsTable)
-        .where(eq(visitsTable.entryDate, dateStr));
+        .where(and(eq(visitsTable.entryDate, dateStr), inScope(req)));
       points.push({ label, total: count });
     }
     res.json(points);
@@ -192,6 +200,7 @@ router.get(
       .from(visitsTable)
       .leftJoin(visitorsTable, eq(visitsTable.visitorId, visitorsTable.id))
       .leftJoin(sectorsTable, eq(visitsTable.sectorId, sectorsTable.id))
+      .where(inScope(req))
       .orderBy(desc(visitsTable.createdAt))
       .limit(limit);
 

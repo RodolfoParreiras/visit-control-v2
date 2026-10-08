@@ -11,7 +11,7 @@ import { eq, ilike, or, and, desc, sql, type SQL } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../middlewares/auth";
 import { auditAction } from "../lib/audit";
 import { isValidCpf, stripCpfMask } from "../lib/cpf";
-import { hasPermission } from "../lib/permissions";
+import { hasPermission, sectorScope } from "../lib/permissions";
 import { isValidBirthDate } from "../lib/priority";
 import { getDashboardPeriods } from "../lib/dashboard-periods";
 import {
@@ -30,6 +30,23 @@ const router: IRouter = Router();
 const CreateVisitorRequest = CreateVisitorBody.extend({
   cpf: CreateVisitorBody.shape.cpf.min(11),
 });
+
+/** Visitantes com ao menos uma visita ao setor. */
+function visitedSector(sectorId: number): SQL {
+  return sql`EXISTS (SELECT 1 FROM ${visitsTable} WHERE ${visitsTable.visitorId} = ${visitorsTable.id} AND ${visitsTable.sectorId} = ${sectorId})`;
+}
+
+/** Visitante visível para o usuário: sem setor, ou já visitou o setor dele. */
+async function visitorInScope(user: AuthReq["user"], visitorId: number): Promise<boolean> {
+  const scope = sectorScope(user);
+  if (!scope) return true;
+  const [row] = await db
+    .select({ id: visitsTable.id })
+    .from(visitsTable)
+    .where(and(eq(visitsTable.visitorId, visitorId), eq(visitsTable.sectorId, scope)))
+    .limit(1);
+  return Boolean(row);
+}
 
 function formatVisitor(v: typeof visitorsTable.$inferSelect) {
   return {
@@ -51,13 +68,20 @@ router.get(
       return;
     }
 
+    // Quem registra visitas precisa encontrar qualquer pessoa pelo nome ou CPF,
+    // mesmo que ela nunca tenha ido ao seu setor.
+    const caller = (req as AuthReq).user;
+    const scope = hasPermission(caller, "registerVisit") ? null : sectorScope(caller);
     const visitors = await db
       .select()
       .from(visitorsTable)
       .where(
-        or(
-          ilike(visitorsTable.name, `%${q}%`),
-          ilike(visitorsTable.cpf, `%${q}%`),
+        and(
+          or(
+            ilike(visitorsTable.name, `%${q}%`),
+            ilike(visitorsTable.cpf, `%${q}%`),
+          ),
+          scope ? visitedSector(scope) : undefined,
         ),
       )
       .orderBy(visitorsTable.name)
@@ -88,6 +112,8 @@ router.get(
     const offset = (pageNum - 1) * limitNum;
 
     const conditions: SQL[] = [];
+    const scope = sectorScope((req as AuthReq).user);
+    if (scope) conditions.push(visitedSector(scope));
     if (search) conditions.push(ilike(visitorsTable.name, `%${search}%`));
     if (cpf) conditions.push(ilike(visitorsTable.cpf, `%${cpf}%`));
     if (phone) conditions.push(ilike(visitorsTable.phone, `%${phone}%`));
@@ -194,10 +220,16 @@ router.get(
       .select()
       .from(visitorsTable)
       .where(eq(visitorsTable.id, id));
-    if (!visitor) {
+    const caller = (req as AuthReq).user;
+    // Quem registra visitas pode abrir qualquer cadastro (ex.: primeira visita
+    // ao setor), mas o histórico mostra só as visitas do seu setor.
+    const visible =
+      visitor && (hasPermission(caller, "registerVisit") || (await visitorInScope(caller, id)));
+    if (!visitor || !visible) {
       res.status(404).json({ error: "Visitante não encontrado" });
       return;
     }
+    const scope = sectorScope(caller);
 
     const visits = await db
       .select({
@@ -227,7 +259,12 @@ router.get(
       })
       .from(visitsTable)
       .leftJoin(sectorsTable, eq(visitsTable.sectorId, sectorsTable.id))
-      .where(eq(visitsTable.visitorId, id))
+      .where(
+        and(
+          eq(visitsTable.visitorId, id),
+          scope ? eq(visitsTable.sectorId, scope) : undefined,
+        ),
+      )
       .orderBy(desc(visitsTable.createdAt));
 
     res.json({
@@ -278,7 +315,7 @@ router.patch(
       .select()
       .from(visitorsTable)
       .where(eq(visitorsTable.id, id));
-    if (!existing) {
+    if (!existing || !(await visitorInScope(caller, id))) {
       res.status(404).json({ error: "Visitante não encontrado" });
       return;
     }

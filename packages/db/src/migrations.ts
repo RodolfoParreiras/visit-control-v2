@@ -170,6 +170,20 @@ const migrations: Migration[] = [
       END;
     `,
   },
+  {
+    id: "008_call_display_permission",
+    sql: `
+      -- O visor de chamadas vira permissão própria. Quem já via o link (quem
+      -- consulta ou registra visitas) continua com acesso.
+      ALTER TABLE users ALTER COLUMN permissions SET DEFAULT '${JSON.stringify(receptionistPermissions)}'::jsonb;
+      UPDATE users SET permissions = permissions || jsonb_build_object(
+        'viewCallDisplay',
+        COALESCE((permissions->>'viewVisits')::boolean, FALSE)
+          OR COALESCE((permissions->>'registerVisit')::boolean, FALSE)
+      )
+      WHERE NOT (permissions ? 'viewCallDisplay');
+    `,
+  },
 ];
 
 async function applyMigration(

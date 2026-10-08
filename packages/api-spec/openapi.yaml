@@ -1013,6 +1013,7 @@ components:
           editVisitorCompany,
           editVisitorCity,
           accessServiceCenter,
+          viewCallDisplay,
           viewReports,
           manageSectors,
           manageSettings,
@@ -1052,6 +1053,8 @@ components:
         editVisitorCity:
           type: boolean
         accessServiceCenter:
+          type: boolean
+        viewCallDisplay:
           type: boolean
         viewReports:
           type: boolean

@@ -23,6 +23,7 @@ export const permissionKeys = [
   "editVisitorCompany",
   "editVisitorCity",
   "accessServiceCenter",
+  "viewCallDisplay",
   "viewReports",
   "manageSectors",
   "manageSettings",
@@ -57,6 +58,7 @@ const roleDefaultPermissions: Record<UserRole, UserPermissions> = {
     editVisitorCompany: true,
     editVisitorCity: true,
     viewReports: true,
+    viewCallDisplay: true,
   },
   attendant: { ...noPermissions, accessServiceCenter: true },
 };

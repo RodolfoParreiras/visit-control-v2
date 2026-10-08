@@ -41,7 +41,11 @@ function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/call-display" component={CallDisplay} />
+      <Route path="/call-display">
+        <PrivateRoute permission="viewCallDisplay">
+          <CallDisplay />
+        </PrivateRoute>
+      </Route>
       <Route path="/change-password">
         <PrivateRoute allowPasswordChange>
           <ChangePassword />

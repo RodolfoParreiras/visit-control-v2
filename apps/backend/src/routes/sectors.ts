@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, sectorsTable, usersTable } from "@visit-control/db";
 import { eq, ilike, and, type SQL } from "drizzle-orm";
 import { requireAuth, requirePermission } from "../middlewares/auth";
+import { sectorScope } from "../lib/permissions";
 import { auditAction } from "../lib/audit";
 import {
   CreateSectorBody,
@@ -29,6 +30,9 @@ router.get(
   async (req: Request, res: Response): Promise<void> => {
     const { search, status } = req.query as Record<string, string | undefined>;
     const conditions: SQL[] = [];
+    // Usuários com setor só enxergam o próprio setor (filtros e formulários).
+    const scope = sectorScope((req as Request & { user: Parameters<typeof sectorScope>[0] }).user);
+    if (scope) conditions.push(eq(sectorsTable.id, scope));
     if (search) conditions.push(ilike(sectorsTable.name, `%${search}%`));
     if (status && ["active", "inactive"].includes(status)) {
       conditions.push(eq(sectorsTable.status, status as "active" | "inactive"));
