@@ -23,6 +23,26 @@ const saveServerUrl = (serverUrl) => {
 
 let mainWindow;
 let isClosing = false;
+let isConfirmingClose = false;
+
+// Pergunta à página se pode fechar (ex.: atendimento em andamento). A regra e
+// o aviso ficam no sistema web; páginas sem a função, como a tela offline,
+// fecham direto.
+async function confirmClose() {
+  try {
+    if (mainWindow.webContents.isDestroyed()) return true;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+    const answer = await mainWindow.webContents.executeJavaScript(
+      `typeof window.__beforeAppClose === 'function' ? window.__beforeAppClose() : true`,
+      true,
+    );
+    return answer !== false;
+  } catch {
+    return true;
+  }
+}
 
 async function clearStoredLogin() {
   const serverUrl = readServerUrl();
@@ -92,8 +112,15 @@ function createWindow() {
   mainWindow.on('close', (event) => {
     if (isClosing) return;
     event.preventDefault();
-    isClosing = true;
-    logoutAndClose().finally(() => mainWindow.destroy());
+    if (isConfirmingClose) return;
+    isConfirmingClose = true;
+    confirmClose()
+      .then((canClose) => {
+        if (!canClose) return;
+        isClosing = true;
+        return logoutAndClose().finally(() => mainWindow.destroy());
+      })
+      .finally(() => { isConfirmingClose = false; });
   });
   Menu.setApplicationMenu(Menu.buildFromTemplate([
     { label: 'Sistema', submenu: [

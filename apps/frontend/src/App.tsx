@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RealtimeProvider } from "@/contexts/RealtimeProvider";
+import { ExitGuardProvider } from "@/contexts/ExitGuard";
 import { PrivateRoute } from "@/components/PrivateRoute";
 
 import Login from "@/pages/login";
@@ -165,9 +166,11 @@ function App() {
       <AuthProvider>
         <RealtimeProvider>
           <TooltipProvider>
-            <WouterRouter base="">
-              <Router />
-            </WouterRouter>
+            <ExitGuardProvider>
+              <WouterRouter base="">
+                <Router />
+              </WouterRouter>
+            </ExitGuardProvider>
             <Toaster />
           </TooltipProvider>
         </RealtimeProvider>

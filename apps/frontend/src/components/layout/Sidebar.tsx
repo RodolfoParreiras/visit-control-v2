@@ -1,5 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/contexts/AuthContext";
+import { useExitGuard } from "@/contexts/ExitGuard";
 import {
   Building2,
   ClipboardList,
@@ -24,7 +25,8 @@ const navClass =
   "relative flex min-h-11 items-center gap-3 rounded-xl border-l-4 border-transparent px-4 py-2.5 text-sm font-semibold transition-all duration-200";
 
 export function Sidebar() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { requestLogout } = useExitGuard();
   const isAdmin = user?.role === "admin";
   const [location] = useLocation();
   const active = (path: string) =>
@@ -152,7 +154,7 @@ export function Sidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start border-0 text-sidebar-foreground/80 hover:bg-white/10 hover:text-white"
-          onClick={logout}
+          onClick={() => void requestLogout()}
         >
           <LogOut className="mr-2 h-4 w-4" />
           Sair do Sistema

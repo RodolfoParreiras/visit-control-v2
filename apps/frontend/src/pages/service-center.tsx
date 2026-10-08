@@ -78,6 +78,16 @@ export default function ServiceCenter() {
     }
   }, [data, deskId]);
 
+  // No navegador, avisa ao fechar a aba com alguém em atendimento. O app
+  // desktop tem o próprio aviso (ExitGuard), e lá o beforeunload bloquearia o F5.
+  const hasCurrent = Boolean(data?.current);
+  useEffect(() => {
+    if (!hasCurrent || 'desktopApp' in window) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasCurrent]);
+
   const refresh = () => queryClient.invalidateQueries({ queryKey: centralKey });
   const selectedDesk = () => (data?.sector.usesDesks ? Number(deskId) : null);
   const callNext = useMutation({
